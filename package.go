@@ -9,12 +9,14 @@ import (
 	"time"
 )
 
+// A Package is an RPM package.
 type Package struct {
-	FileInfo os.FileInfo
-	Lead     Lead
-	Headers  Headers
+	Lead    Lead
+	Headers Headers
 }
 
+// A Lead is the deprecated lead section of an RPM file which is used in legacy
+// rpm versions to store package metadata.
 type Lead struct {
 	VersionMajor    int
 	VersionMinor    int
@@ -25,6 +27,7 @@ type Lead struct {
 	SignatureType   int
 }
 
+// A Header stores metadata about a rpm package.
 type Header struct {
 	Version    int
 	IndexCount int
@@ -32,8 +35,11 @@ type Header struct {
 	Indexes    IndexEntries
 }
 
+// Headers is an array of Header structs.
 type Headers []Header
 
+// OpenPackage reads a rpm package from the file systems and returns a pointer
+// to it.
 func OpenPackage(path string) (*Package, error) {
 	// open file
 	f, err := os.Open(path)
@@ -45,6 +51,7 @@ func OpenPackage(path string) (*Package, error) {
 	return ReadPackage(f)
 }
 
+// ReadPackage reads a rpm package from a stream and returns a pointer to it.
 func ReadPackage(r io.ReadSeeker) (*Package, error) {
 	p := &Package{}
 
@@ -209,6 +216,8 @@ func ReadPackage(r io.ReadSeeker) (*Package, error) {
 	return p, nil
 }
 
+// String reassembles package metadata to form a standard rpm package name;
+// including the package name, version, release and architecture.
 func (c *Package) String() string {
 	return fmt.Sprintf("%s-%s-%s.%s", c.Name(), c.Version(), c.Release(), c.Architecture())
 }
@@ -230,11 +239,11 @@ func (c *Package) Epoch() time.Time {
 }
 
 func (c *Package) Summary() []string {
-	return c.Headers[1].Indexes.GetStringArray(1004)
+	return c.Headers[1].Indexes.GetStrings(1004)
 }
 
 func (c *Package) Description() []string {
-	return c.Headers[1].Indexes.GetStringArray(1005)
+	return c.Headers[1].Indexes.GetStrings(1005)
 }
 
 func (c *Package) BuildTime() time.Time {
@@ -278,19 +287,19 @@ func (c *Package) Packager() string {
 }
 
 func (c *Package) Groups() []string {
-	return c.Headers[1].Indexes.GetStringArray(1016)
+	return c.Headers[1].Indexes.GetStrings(1016)
 }
 
 func (c *Package) ChangeLog() []string {
-	return c.Headers[1].Indexes.GetStringArray(1017)
+	return c.Headers[1].Indexes.GetStrings(1017)
 }
 
 func (c *Package) Source() []string {
-	return c.Headers[1].Indexes.GetStringArray(1018)
+	return c.Headers[1].Indexes.GetStrings(1018)
 }
 
 func (c *Package) Patch() []string {
-	return c.Headers[1].Indexes.GetStringArray(1019)
+	return c.Headers[1].Indexes.GetStrings(1019)
 }
 
 func (c *Package) URL() string {
@@ -322,7 +331,7 @@ func (c *Package) PostUninstallScript() string {
 }
 
 func (c *Package) OldFilenames() []string {
-	return c.Headers[1].Indexes.GetStringArray(1027)
+	return c.Headers[1].Indexes.GetStrings(1027)
 }
 
 func (c *Package) Icon() []byte {
@@ -334,11 +343,11 @@ func (c *Package) SourceRPM() string {
 }
 
 func (c *Package) Provides() []string {
-	return c.Headers[1].Indexes.GetStringArray(1047)
+	return c.Headers[1].Indexes.GetStrings(1047)
 }
 
 func (c *Package) Requires() []string {
-	return c.Headers[1].Indexes.GetStringArray(1049)
+	return c.Headers[1].Indexes.GetStrings(1049)
 }
 
 func (c *Package) RPMVersion() string {

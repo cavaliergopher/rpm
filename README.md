@@ -5,6 +5,16 @@ A native implementation of the RPM file specification in Go.
 	$ go get github.com/cavaliercoder/go-rpm
 
 
+The go-rpm package aims to enable cross-platform tooling for yum/dnf/rpm
+written in Go (E.g. [y10k](https://github.com/cavaliercoder/y10k)).
+
+Initial goals include like-for-like implementation of existing rpm ecosystem
+features such as:
+
+* Reading of modern and legacy rpm package file formats
+* Reading, creating and updating modern and legacy yum repository metadata
+
+
 ## License
 
 Copyright (c) 2015 Ryan Armstrong 
