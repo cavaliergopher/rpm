@@ -1,6 +1,3 @@
-// see:
-//   https://github.com/rpm-software-management/rpm/tree/master/lib
-//   http://www.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
 package rpm
 
 import (

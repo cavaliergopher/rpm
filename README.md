@@ -1,30 +1,8 @@
-# go-rpm
+# go-rpm [![GoDoc](https://godoc.org/github.com/cavaliercoder/go-rpm?status.svg)](https://godoc.org/github.com/cavaliercoder/go-rpm)
 
 A native implementation of the RPM file specification in Go.
 
-## Installation
-
 	$ go get github.com/cavaliercoder/go-rpm
-
-
-## Example
-
-```go
-import (
-	"fmt"
-	"github.com/cavaliercoder/go-rpm"
-)
-
-func main() {
-	p, err := rpm.OpenPackage("my-package.rpm")
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("Loaded package: %v", p)
-}
-
-```
 
 
 ## License
