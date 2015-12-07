@@ -5,11 +5,13 @@ $script = <<end
 # install build tools and runtime prerequisities
 yum install -y epel-release
 yum install -y \
+	bzip2 \
 	createrepo \
 	git \
 	golang \
 	make \
 	mercurial \
+	sqlite \
 	yum-utils
 
 # configure GOPATH for user vagrant
@@ -19,11 +21,6 @@ export GOPATH=\\$HOME/go
 export PATH=\\$PATH:/vagrant:\\$HOME/go/bin
 
 EOF
-
-# install go dependencies
-source /home/vagrant/.bashrc
-cd /vagrant
-make get-deps
 
 # fix perms
 chown -R vagrant.vagrant /home/vagrant

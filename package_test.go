@@ -20,10 +20,11 @@ func TestReadRPMFile(t *testing.T) {
 	for _, f := range files {
 		if strings.HasSuffix(f.Name(), ".rpm") {
 			path := filepath.Join(dir, f.Name())
-			_, err := OpenPackage(path)
+			rpm, err := OpenPackage(path)
 			if err != nil {
 				t.Errorf("Error loading RPM file %s: %s", f.Name(), err)
 			} else {
+				t.Logf("Read package: %v", rpm)
 				valid++
 			}
 		}
