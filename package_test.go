@@ -2,13 +2,18 @@ package rpm
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestReadRPMFile(t *testing.T) {
-	dir := "./rpms"
+	// get a directory full of rpms from RPM_DIR environment variable
+	dir := os.Getenv("RPM_DIR")
+	if dir == "" {
+		t.Fatalf("$RPM_DIR is not set.")
+	}
 
 	// list RPM files
 	files, err := ioutil.ReadDir(dir)
