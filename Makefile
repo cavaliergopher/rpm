@@ -8,3 +8,4 @@ test:
 
 get-deps:
 	go get -u github.com/mattn/go-sqlite3
+

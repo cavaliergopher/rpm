@@ -1,4 +1,4 @@
-package rpm
+package yum
 
 import (
 	"database/sql"

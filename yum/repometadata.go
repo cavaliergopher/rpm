@@ -11,33 +11,13 @@ type RepoMetadata struct {
 	XMLNS    string   `xml:"xmlns,attr"`
 	XMLNSRPM string   `xml:"xmlns:rpm,attr"`
 
-	Revision int                `xml:"revision"`
-	Data     []RepoMetadataItem `xml:"data"`
-}
-
-type RepoMetadataItem struct {
-	Type            string                   `xml:"type,attr"`
-	Location        RepoMetadataItemLocation `xml:"location"`
-	Timestamp       int                      `xml:"timestamp"`
-	Size            int                      `xml:"size"`
-	Checksum        RepoMetadataItemChecksum `xml:"checksum"`
-	OpenSize        int                      `xml:"open-size"`
-	OpenChecksum    RepoMetadataItemChecksum `xml:"open-checksum"`
-	DatabaseVersion int                      `xml:"database_version"`
-}
-
-type RepoMetadataItemChecksum struct {
-	Type string `xml:"type,attr"`
-	Hash string `xml:",chardata"`
-}
-
-type RepoMetadataItemLocation struct {
-	Href string `xml:"href,attr"`
+	Revision  int            `xml:"revision"`
+	Databases []RepoDatabase `xml:"data"`
 }
 
 func ReadRepoMetadata(r io.Reader) (*RepoMetadata, error) {
 	md := RepoMetadata{
-		Data: make([]RepoMetadataItem, 0),
+		Databases: make([]RepoDatabase, 0),
 	}
 
 	decoder := xml.NewDecoder(r)
