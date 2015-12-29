@@ -52,7 +52,7 @@ func OpenPackage(path string) (*Package, error) {
 }
 
 // ReadPackage reads a rpm package from a stream and returns a pointer to it.
-func ReadPackage(r io.ReadSeeker) (*Package, error) {
+func ReadPackage(r io.Reader) (*Package, error) {
 	p := &Package{}
 
 	// read the deprecated "lead"
@@ -91,7 +91,7 @@ func ReadPackage(r io.ReadSeeker) (*Package, error) {
 		header := make([]byte, 16)
 		n, err = r.Read(header)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading RPM structure header for header %d: %s", err, i)
+			return nil, fmt.Errorf("Error reading RPM structure header for header %d: %v", i, err)
 		}
 
 		if n != 16 {
@@ -115,7 +115,7 @@ func ReadPackage(r io.ReadSeeker) (*Package, error) {
 		indexes := make([]byte, indexLength)
 		n, err = r.Read(indexes)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading index entries for header %d: %s", i, err)
+			return nil, fmt.Errorf("Error reading index entries for header %d: %v", i, err)
 		}
 
 		if n != indexLength {
@@ -137,7 +137,7 @@ func ReadPackage(r io.ReadSeeker) (*Package, error) {
 		store := make([]byte, h.Length)
 		n, err = r.Read(store)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading store for header %d: %s", i, err)
+			return nil, fmt.Errorf("Error reading store for header %d: %v", i, err)
 		}
 
 		if int64(n) != h.Length {
@@ -204,12 +204,19 @@ func ReadPackage(r io.ReadSeeker) (*Package, error) {
 		p.Headers = append(p.Headers, h)
 
 		// calculate location of next header by padding to a multiple of 8
-		o := 8 - int64(math.Mod(float64(h.Length), 8))
+		o := 8 - int(math.Mod(float64(h.Length), 8))
 
 		// seek to next header
-		_, err := r.Seek(o, 1)
-		if err != nil {
-			return nil, err
+		if o > 0 {
+			pad := make([]byte, o)
+			n, err = r.Read(pad)
+			if err != nil {
+				return nil, fmt.Errorf("Error seeking beyond header padding of %d bytes: %v", o, err)
+			}
+
+			if n != o {
+				return nil, fmt.Errorf("Error seeking beyond header padding of %d bytes: only %d bytes returned", o, n)
+			}
 		}
 	}
 
