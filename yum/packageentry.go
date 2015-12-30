@@ -19,12 +19,22 @@ func NewPackageEntry(row []interface{}) (*PackageEntry, error) {
 
 // String reassembles package metadata to form a standard rpm package name;
 // including the package name, version, release and architecture.
-func (c *PackageEntry) String() string {
+func (c PackageEntry) String() string {
 	return fmt.Sprintf("%s-%s-%s.%s", c.Name(), c.Version(), c.Release(), c.Architecture())
 }
 
-func (c *PackageEntry) ID() string {
+// LocationHref is the location of the package, relative to the parent
+// repository.
+func (c *PackageEntry) LocationHref() string {
+	return string(c.row[23].([]byte))
+}
+
+func (c *PackageEntry) Checksum() string {
 	return string(c.row[1].([]byte))
+}
+
+func (c *PackageEntry) ChecksumType() string {
+	return string(c.row[25].([]byte))
 }
 
 func (c *PackageEntry) Name() string {

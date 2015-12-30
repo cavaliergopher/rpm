@@ -10,12 +10,12 @@ import (
 // TODO: Add support for XML primary dbs
 
 const sqlCreateTables = `CREATE TABLE db_info (dbversion INTEGER, checksum TEXT);
-CREATE TABLE packages (  pkgKey INTEGER PRIMARY KEY,  pkgId TEXT,  name TEXT,  arch TEXT,  version TEXT,  epoch TEXT,  release TEXT,  summary TEXT,  description TEXT,  url TEXT,  time_file INTEGER,  time_build INTEGER,  rpm_license TEXT,  rpm_vendor TEXT,  rpm_group TEXT,  rpm_buildhost TEXT,  rpm_sourcerpm TEXT,  rpm_header_start INTEGER,  rpm_header_end INTEGER,  rpm_packager TEXT,  size_package INTEGER,  size_installed INTEGER,  size_archive INTEGER,  location_href TEXT,  location_base TEXT,  checksum_type TEXT);
-CREATE TABLE files (  name TEXT,  type TEXT,  pkgKey INTEGER);
-CREATE TABLE requires (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER , pre BOOLEAN DEFAULT FALSE);
-CREATE TABLE provides (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER );
-CREATE TABLE conflicts (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER );
-CREATE TABLE obsoletes (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER );`
+CREATE TABLE packages ( pkgKey INTEGER PRIMARY KEY, pkgId TEXT, name TEXT, arch TEXT, version TEXT, epoch TEXT, release TEXT, summary TEXT, description TEXT, url TEXT, time_file INTEGER, time_build INTEGER, rpm_license TEXT, rpm_vendor TEXT, rpm_group TEXT, rpm_buildhost TEXT, rpm_sourcerpm TEXT, rpm_header_start INTEGER, rpm_header_end INTEGER, rpm_packager TEXT, size_package INTEGER, size_installed INTEGER, size_archive INTEGER, location_href TEXT, location_base TEXT, checksum_type TEXT);
+CREATE TABLE files ( name TEXT, type TEXT, pkgKey INTEGER);
+CREATE TABLE requires ( name TEXT, flags TEXT, epoch TEXT, version TEXT, release TEXT, pkgKey INTEGER , pre BOOLEAN DEFAULT FALSE);
+CREATE TABLE provides ( name TEXT, flags TEXT, epoch TEXT, version TEXT, release TEXT, pkgKey INTEGER );
+CREATE TABLE conflicts ( name TEXT, flags TEXT, epoch TEXT, version TEXT, release TEXT, pkgKey INTEGER );
+CREATE TABLE obsoletes ( name TEXT, flags TEXT, epoch TEXT, version TEXT, release TEXT, pkgKey INTEGER );`
 
 const sqlCreateTriggers = `CREATE TRIGGER removals AFTER DELETE ON packages  BEGIN    DELETE FROM files WHERE pkgKey = old.pkgKey;    DELETE FROM requires WHERE pkgKey = old.pkgKey;    DELETE FROM provides WHERE pkgKey = old.pkgKey;    DELETE FROM conflicts WHERE pkgKey = old.pkgKey;    DELETE FROM obsoletes WHERE pkgKey = old.pkgKey;  END;`
 
@@ -118,38 +118,45 @@ func (c *PrimaryDatabase) Packages() (PackageEntries, error) {
 	}
 	defer db.Close()
 
+	// select packages
 	rows, err := db.Query(sqlSelectPackages)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	// get column count
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
 	}
-
 	columnCount := len(columns)
 
+	// parse each row as a package
+	packages := make(PackageEntries, 0)
 	for rows.Next() {
+		// create splice of interfaces to store value for this package
 		x := make([]interface{}, columnCount)
+
+		// create slice of pointers to the previous slice values
 		y := make([]interface{}, columnCount)
 		for i := 0; i < columnCount; i++ {
 			y[i] = &x[i]
 		}
 
+		// scan the values into the slice
 		if err = rows.Scan(y...); err != nil {
 			return nil, fmt.Errorf("Error scanning packages: %v", err)
 		}
 
-		// create package struct
+		// create package struct from values
 		p, err := NewPackageEntry(x)
 		if err != nil {
 			return nil, fmt.Errorf("Error reading package: %v", err)
 		}
 
-		fmt.Printf("Package: %v\n", p)
+		packages = append(packages, *p)
 	}
 
-	return nil, nil
+	return packages, nil
 }
