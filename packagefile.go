@@ -229,6 +229,9 @@ func (c *PackageFile) String() string {
 	return fmt.Sprintf("%s-%s-%s.%s", c.Name(), c.Version(), c.Release(), c.Architecture())
 }
 
+// For tag definitions, see:
+// https://github.com/rpm-software-management/rpm/blob/master/lib/rpmtag.h
+
 func (c *PackageFile) Name() string {
 	return c.Headers[1].Indexes.GetString(1000)
 }
@@ -241,8 +244,8 @@ func (c *PackageFile) Release() string {
 	return c.Headers[1].Indexes.GetString(1002)
 }
 
-func (c *PackageFile) Epoch() time.Time {
-	return c.Headers[1].Indexes.GetTime(1003)
+func (c *PackageFile) Epoch() int64 {
+	return c.Headers[1].Indexes.GetInt(1003)
 }
 
 func (c *PackageFile) Summary() []string {

@@ -5,5 +5,6 @@ type Package interface {
 	Name() string
 	Version() string
 	Release() string
+	Epoch() int64
 	Architecture() string
 }

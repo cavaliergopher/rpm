@@ -31,31 +31,16 @@ CREATE INDEX pkgconflicts on conflicts (pkgKey);
 CREATE INDEX pkgobsoletes on obsoletes (pkgKey);`
 
 const sqlSelectPackages = `SELECT
- pkgKey
- , pkgId
- , name
+ name
  , arch
- , version
  , epoch
+ , version
  , release
- , summary
- , description
- , url
- , time_file
- , time_build
- , rpm_license
- , rpm_vendor
- , rpm_group
- , rpm_buildhost
- , rpm_sourcerpm
- , rpm_header_start
- , rpm_header_end
- , rpm_packager
  , size_package
  , size_installed
  , size_archive
  , location_href
- , location_base
+ , pkgId
  , checksum_type
 FROM packages;`
 
@@ -125,37 +110,17 @@ func (c *PrimaryDatabase) Packages() (PackageEntries, error) {
 	}
 	defer rows.Close()
 
-	// get column count
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-	columnCount := len(columns)
-
 	// parse each row as a package
 	packages := make(PackageEntries, 0)
 	for rows.Next() {
-		// create splice of interfaces to store value for this package
-		x := make([]interface{}, columnCount)
-
-		// create slice of pointers to the previous slice values
-		y := make([]interface{}, columnCount)
-		for i := 0; i < columnCount; i++ {
-			y[i] = &x[i]
-		}
+		p := PackageEntry{}
 
 		// scan the values into the slice
-		if err = rows.Scan(y...); err != nil {
+		if err = rows.Scan(&p.name, &p.architecture, &p.epoch, &p.version, &p.release, &p.package_size, &p.install_size, &p.archive_size, &p.locationhref, &p.checksum, &p.checksum_type); err != nil {
 			return nil, fmt.Errorf("Error scanning packages: %v", err)
 		}
 
-		// create package struct from values
-		p, err := NewPackageEntry(x)
-		if err != nil {
-			return nil, fmt.Errorf("Error reading package: %v", err)
-		}
-
-		packages = append(packages, *p)
+		packages = append(packages, p)
 	}
 
 	return packages, nil
