@@ -42,6 +42,7 @@ const sqlSelectPackages = `SELECT
  , location_href
  , pkgId
  , checksum_type
+ , time_build
 FROM packages;`
 
 type PrimaryDatabase struct {
@@ -116,7 +117,7 @@ func (c *PrimaryDatabase) Packages() (PackageEntries, error) {
 		p := PackageEntry{}
 
 		// scan the values into the slice
-		if err = rows.Scan(&p.name, &p.architecture, &p.epoch, &p.version, &p.release, &p.package_size, &p.install_size, &p.archive_size, &p.locationhref, &p.checksum, &p.checksum_type); err != nil {
+		if err = rows.Scan(&p.name, &p.architecture, &p.epoch, &p.version, &p.release, &p.package_size, &p.install_size, &p.archive_size, &p.locationhref, &p.checksum, &p.checksum_type, &p.time_build); err != nil {
 			return nil, fmt.Errorf("Error scanning packages: %v", err)
 		}
 

@@ -2,6 +2,7 @@ package yum
 
 import (
 	"fmt"
+	"time"
 )
 
 // PackageEntry is a RPM package as defined in a package repository database.
@@ -17,6 +18,7 @@ type PackageEntry struct {
 	package_size  int64
 	release       string
 	version       string
+	time_build    int64
 }
 
 type PackageEntries []PackageEntry
@@ -71,4 +73,8 @@ func (c *PackageEntry) Architecture() string {
 
 func (c *PackageEntry) Epoch() int64 {
 	return c.epoch
+}
+
+func (c *PackageEntry) BuildTime() time.Time {
+	return time.Unix(c.time_build, 0)
 }
