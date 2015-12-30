@@ -7,5 +7,4 @@ test:
 	go test -v
 
 get-deps:
-	go get -u github.com/mattn/go-sqlite3
-
+	go get github.com/mattn/go-sqlite3

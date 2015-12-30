@@ -1,5 +1,7 @@
 package yum
 
+// RepoDatabase represents an entry in a repository metadata file for an
+// individual database file such as primary_db or filelists_db.
 type RepoDatabase struct {
 	Type            string               `xml:"type,attr"`
 	Location        RepoDatabaseLocation `xml:"location"`

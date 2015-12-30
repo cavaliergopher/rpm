@@ -6,6 +6,9 @@ import (
 	"io"
 )
 
+// RepoMetadata represents the metadata XML file for a RPM/Yum repository. It
+// contains pointers to database files which describe the packages available in
+// the repository.
 type RepoMetadata struct {
 	XMLName  xml.Name `xml:"repomd"`
 	XMLNS    string   `xml:"xmlns,attr"`
