@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// PackageEntry is a RPM package as defined in a package repository database.
+// PackageEntry is a RPM package as defined in a yum repository database.
 type PackageEntry struct {
 	key           int64
 	architecture  string
@@ -23,6 +23,7 @@ type PackageEntry struct {
 	time_build    int64
 }
 
+// PackageEntries is a slice of PackageEntry structs.
 type PackageEntries []PackageEntry
 
 // String reassembles package metadata to form a standard rpm package name;

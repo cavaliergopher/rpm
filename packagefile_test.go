@@ -28,7 +28,7 @@ func TestReadRPMFile(t *testing.T) {
 				if err != nil {
 					t.Errorf("Error loading RPM file %s: %s", f.Name(), err)
 				} else {
-					t.Logf("Read package: %v", rpm)
+					t.Logf("Loaded package: %v", rpm)
 					valid++
 				}
 			}

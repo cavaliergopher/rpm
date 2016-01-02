@@ -12,6 +12,8 @@ import (
 // match.
 var ErrChecksumMismatch = fmt.Errorf("Checksum mismatch")
 
+// RepoDatabaseChecksum is the XML element of a repo metadata file which
+// describes the checksum required to validate a repository database.
 type RepoDatabaseChecksum struct {
 	Type string `xml:"type,attr"`
 	Hash string `xml:",chardata"`

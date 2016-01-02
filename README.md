@@ -13,6 +13,25 @@ features such as:
 
 * Reading of modern and legacy rpm package file formats
 * Reading, creating and updating modern and legacy yum repository metadata
+* Reading of the rpm database
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/cavaliercoder/go-rpm"
+)
+
+func main() {
+	p, err := rpm.OpenPackageFile("my-package.rpm")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Loaded package: %v", p)
+}
+```
 
 
 ## License

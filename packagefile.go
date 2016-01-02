@@ -10,7 +10,8 @@ import (
 	"time"
 )
 
-// A PackageFile is an RPM package loaded from a stored filed.
+// A PackageFile is an RPM package definition loaded directly from the pacakge
+// file itself.
 type PackageFile struct {
 	Lead    Lead
 	Headers Headers
@@ -32,7 +33,7 @@ type Lead struct {
 type Header struct {
 	Version    int
 	IndexCount int
-	Length     int64
+	Length     int
 	Indexes    IndexEntries
 }
 
@@ -52,9 +53,12 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 	return ReadPackageFile(f)
 }
 
-// ReadPackageFile reads a rpm package from a stream and returns a pointer to it.
+// ReadPackageFile reads a rpm package file from a stream and returns a pointer
+// to it.
 func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	p := &PackageFile{}
+
+	// See: http://www.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
 
 	// read the deprecated "lead"
 	lead := make([]byte, 96)
@@ -75,11 +79,11 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	// translate lead
 	p.Lead.VersionMajor = int(lead[5])
 	p.Lead.VersionMinor = int(lead[6])
-	p.Lead.Type = (int(lead[7]) << 8) + int(lead[8])
-	p.Lead.Architecture = (int(lead[9]) << 8) + int(lead[10])
+	p.Lead.Type = int(binary.BigEndian.Uint16(lead[7:9]))
+	p.Lead.Architecture = int(binary.BigEndian.Uint16(lead[9:11]))
 	p.Lead.Name = string(lead[10:77])
-	p.Lead.OperatingSystem = (int(lead[76]) << 8) + int(lead[77])
-	p.Lead.SignatureType = (int(lead[78]) << 8) + int(lead[79])
+	p.Lead.OperatingSystem = int(binary.BigEndian.Uint16(lead[76:78]))
+	p.Lead.SignatureType = int(binary.BigEndian.Uint16(lead[78:80]))
 
 	// TODO: validate lead value ranges
 
@@ -107,8 +111,8 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 		// translate header
 		h := Header{}
 		h.Version = int(header[3])
-		h.IndexCount = (int(header[8]) << 24) + (int(header[9]) << 16) + (int(header[10]) << 8) + int(header[11])
-		h.Length = (int64(header[12]) << 24) + (int64(header[13]) << 16) + (int64(header[14]) << 8) + int64(header[15])
+		h.IndexCount = int(binary.BigEndian.Uint32(header[8:12]))
+		h.Length = int(binary.BigEndian.Uint32(header[12:16]))
 		h.Indexes = make(IndexEntries, h.IndexCount)
 
 		// read indexes
@@ -127,10 +131,10 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 			o := 16 * x
 			index := IndexEntry{}
 
-			index.Tag = (int64(indexes[o]) << 24) + (int64(indexes[o+1]) << 16) + (int64(indexes[o+2]) << 8) + int64(indexes[o+3])
-			index.Type = (int64(indexes[o+4]) << 24) + (int64(indexes[o+5]) << 16) + (int64(indexes[o+6]) << 8) + int64(indexes[o+7])
-			index.Offset = (int64(indexes[o+8]) << 24) + (int64(indexes[o+9]) << 16) + (int64(indexes[o+10]) << 8) + int64(indexes[o+11])
-			index.ItemCount = (int64(indexes[o+12]) << 24) + (int64(indexes[o+13]) << 16) + (int64(indexes[o+14]) << 8) + int64(indexes[o+15])
+			index.Tag = int(binary.BigEndian.Uint32(indexes[o : o+4]))
+			index.Type = int(binary.BigEndian.Uint32(indexes[o+4 : o+8]))
+			index.Offset = int(binary.BigEndian.Uint32(indexes[o+8 : o+12]))
+			index.ItemCount = int(binary.BigEndian.Uint32(indexes[o+12 : o+16]))
 			h.Indexes[x] = index
 		}
 
@@ -141,10 +145,11 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 			return nil, fmt.Errorf("Error reading store for header %d: %v", i, err)
 		}
 
-		if int64(n) != h.Length {
+		if n != h.Length {
 			return nil, fmt.Errorf("Error reading store for header %d: only %d bytes returned", i, n)
 		}
 
+		// parse the value of each index from the store
 		for x := 0; x < h.IndexCount; x++ {
 			index := h.Indexes[x]
 			o := index.Offset
@@ -152,7 +157,7 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 			switch index.Type {
 			case IndexDataTypeChar:
 				vals := make([]uint8, index.ItemCount)
-				for v := int64(0); v < index.ItemCount; v++ {
+				for v := 0; v < index.ItemCount; v++ {
 					vals[v] = uint8(store[o])
 					o += 1
 				}
@@ -161,7 +166,7 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 
 			case IndexDataTypeInt8:
 				vals := make([]int8, index.ItemCount)
-				for v := int64(0); v < index.ItemCount; v++ {
+				for v := 0; v < index.ItemCount; v++ {
 					vals[v] = int8(store[o])
 					o += 1
 				}
@@ -170,7 +175,7 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 
 			case IndexDataTypeInt16:
 				vals := make([]int16, index.ItemCount)
-				for v := int64(0); v < index.ItemCount; v++ {
+				for v := 0; v < index.ItemCount; v++ {
 					vals[v] = int16(binary.BigEndian.Uint16(store[o : o+2]))
 					o += 2
 				}
@@ -179,7 +184,7 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 
 			case IndexDataTypeInt32:
 				vals := make([]int32, index.ItemCount)
-				for v := int64(0); v < index.ItemCount; v++ {
+				for v := 0; v < index.ItemCount; v++ {
 					vals[v] = int32(binary.BigEndian.Uint32(store[o : o+4]))
 					o += 4
 				}
@@ -188,7 +193,7 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 
 			case IndexDataTypeInt64:
 				vals := make([]int64, index.ItemCount)
-				for v := int64(0); v < index.ItemCount; v++ {
+				for v := 0; v < index.ItemCount; v++ {
 					vals[v] = int64(binary.BigEndian.Uint64(store[o : o+8]))
 					o += 8
 				}
@@ -206,8 +211,8 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 
 				for s := 0; s < int(index.ItemCount); s++ {
 					// calculate string length
-					var j int64
-					for j = 0; store[int64(j)+o] != 0; j++ {
+					var j int
+					for j = 0; store[j+o] != 0; j++ {
 					}
 
 					vals[s] = string(store[o : o+j])
@@ -246,12 +251,12 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 
 // dependencies translates the given tag values into a slice of package
 // relationships such as provides, conflicts, obsoletes and requires.
-func (c *PackageFile) dependencies(nevrsTagId, flagsTagId, namesTagId, versionsTagId int64) Dependencies {
+func (c *PackageFile) dependencies(nevrsTagId, flagsTagId, namesTagId, versionsTagId int) Dependencies {
 	// TODO: Implement NEVRS tags
 
-	flgs := c.Headers[1].Indexes.GetInts(flagsTagId)
-	names := c.Headers[1].Indexes.GetStrings(namesTagId)
-	vers := c.Headers[1].Indexes.GetStrings(versionsTagId)
+	flgs := c.Headers[1].Indexes.IntsByTag(flagsTagId)
+	names := c.Headers[1].Indexes.StringsByTag(namesTagId)
+	vers := c.Headers[1].Indexes.StringsByTag(versionsTagId)
 
 	deps := make(Dependencies, len(names))
 	for i := 0; i < len(names); i++ {
@@ -271,19 +276,19 @@ func (c *PackageFile) String() string {
 // https://github.com/rpm-software-management/rpm/blob/master/lib/rpmtag.h
 
 func (c *PackageFile) Name() string {
-	return c.Headers[1].Indexes.GetString(1000)
+	return c.Headers[1].Indexes.StringByTag(1000)
 }
 
 func (c *PackageFile) Version() string {
-	return c.Headers[1].Indexes.GetString(1001)
+	return c.Headers[1].Indexes.StringByTag(1001)
 }
 
 func (c *PackageFile) Release() string {
-	return c.Headers[1].Indexes.GetString(1002)
+	return c.Headers[1].Indexes.StringByTag(1002)
 }
 
 func (c *PackageFile) Epoch() int64 {
-	return c.Headers[1].Indexes.GetInt(1003)
+	return c.Headers[1].Indexes.IntByTag(1003)
 }
 
 func (c *PackageFile) Requires() Dependencies {
@@ -303,113 +308,113 @@ func (c *PackageFile) Obsoletes() Dependencies {
 }
 
 func (c *PackageFile) Summary() []string {
-	return c.Headers[1].Indexes.GetStrings(1004)
+	return c.Headers[1].Indexes.StringsByTag(1004)
 }
 
 func (c *PackageFile) Description() []string {
-	return c.Headers[1].Indexes.GetStrings(1005)
+	return c.Headers[1].Indexes.StringsByTag(1005)
 }
 
 func (c *PackageFile) BuildTime() time.Time {
-	return c.Headers[1].Indexes.GetTime(1006)
+	return c.Headers[1].Indexes.TimeByTag(1006)
 }
 
 func (c *PackageFile) BuildHost() string {
-	return c.Headers[1].Indexes.GetString(1007)
+	return c.Headers[1].Indexes.StringByTag(1007)
 }
 
 func (c *PackageFile) InstallTime() time.Time {
-	return c.Headers[1].Indexes.GetTime(1008)
+	return c.Headers[1].Indexes.TimeByTag(1008)
 }
 
 func (c *PackageFile) Size() int64 {
-	return c.Headers[1].Indexes.GetInt(1009)
+	return c.Headers[1].Indexes.IntByTag(1009)
 }
 
 func (c *PackageFile) Distribution() string {
-	return c.Headers[1].Indexes.GetString(1010)
+	return c.Headers[1].Indexes.StringByTag(1010)
 }
 
 func (c *PackageFile) Vendor() string {
-	return c.Headers[1].Indexes.GetString(1011)
+	return c.Headers[1].Indexes.StringByTag(1011)
 }
 
 func (c *PackageFile) GIFImage() []byte {
-	return c.Headers[1].Indexes.GetBytes(1012)
+	return c.Headers[1].Indexes.BytesByTag(1012)
 }
 
 func (c *PackageFile) XPMImage() []byte {
-	return c.Headers[1].Indexes.GetBytes(1013)
+	return c.Headers[1].Indexes.BytesByTag(1013)
 }
 
 func (c *PackageFile) License() string {
-	return c.Headers[1].Indexes.GetString(1014)
+	return c.Headers[1].Indexes.StringByTag(1014)
 }
 
 func (c *PackageFile) PackageFiler() string {
-	return c.Headers[1].Indexes.GetString(1015)
+	return c.Headers[1].Indexes.StringByTag(1015)
 }
 
 func (c *PackageFile) Groups() []string {
-	return c.Headers[1].Indexes.GetStrings(1016)
+	return c.Headers[1].Indexes.StringsByTag(1016)
 }
 
 func (c *PackageFile) ChangeLog() []string {
-	return c.Headers[1].Indexes.GetStrings(1017)
+	return c.Headers[1].Indexes.StringsByTag(1017)
 }
 
 func (c *PackageFile) Source() []string {
-	return c.Headers[1].Indexes.GetStrings(1018)
+	return c.Headers[1].Indexes.StringsByTag(1018)
 }
 
 func (c *PackageFile) Patch() []string {
-	return c.Headers[1].Indexes.GetStrings(1019)
+	return c.Headers[1].Indexes.StringsByTag(1019)
 }
 
 func (c *PackageFile) URL() string {
-	return c.Headers[1].Indexes.GetString(1020)
+	return c.Headers[1].Indexes.StringByTag(1020)
 }
 
 func (c *PackageFile) OperatingSystem() string {
-	return c.Headers[1].Indexes.GetString(1021)
+	return c.Headers[1].Indexes.StringByTag(1021)
 }
 
 func (c *PackageFile) Architecture() string {
-	return c.Headers[1].Indexes.GetString(1022)
+	return c.Headers[1].Indexes.StringByTag(1022)
 }
 
 func (c *PackageFile) PreInstallScript() string {
-	return c.Headers[1].Indexes.GetString(1023)
+	return c.Headers[1].Indexes.StringByTag(1023)
 }
 
 func (c *PackageFile) PostInstallScript() string {
-	return c.Headers[1].Indexes.GetString(1024)
+	return c.Headers[1].Indexes.StringByTag(1024)
 }
 
 func (c *PackageFile) PreUninstallScript() string {
-	return c.Headers[1].Indexes.GetString(1025)
+	return c.Headers[1].Indexes.StringByTag(1025)
 }
 
 func (c *PackageFile) PostUninstallScript() string {
-	return c.Headers[1].Indexes.GetString(1026)
+	return c.Headers[1].Indexes.StringByTag(1026)
 }
 
 func (c *PackageFile) OldFilenames() []string {
-	return c.Headers[1].Indexes.GetStrings(1027)
+	return c.Headers[1].Indexes.StringsByTag(1027)
 }
 
 func (c *PackageFile) Icon() []byte {
-	return c.Headers[1].Indexes.GetBytes(1043)
+	return c.Headers[1].Indexes.BytesByTag(1043)
 }
 
 func (c *PackageFile) SourceRPM() string {
-	return c.Headers[1].Indexes.GetString(1044)
+	return c.Headers[1].Indexes.StringByTag(1044)
 }
 
 func (c *PackageFile) RPMVersion() string {
-	return c.Headers[1].Indexes.GetString(1064)
+	return c.Headers[1].Indexes.StringByTag(1064)
 }
 
 func (c *PackageFile) Platform() string {
-	return c.Headers[1].Indexes.GetString(1132)
+	return c.Headers[1].Indexes.StringByTag(1132)
 }

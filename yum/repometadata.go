@@ -18,6 +18,8 @@ type RepoMetadata struct {
 	Databases []RepoDatabase `xml:"data"`
 }
 
+// ReadRepoMetadata loads a repomd.xml file from the given io.Reader and returns
+// a pointer to the resulting RepoMetadata struct.
 func ReadRepoMetadata(r io.Reader) (*RepoMetadata, error) {
 	md := RepoMetadata{
 		Databases: make([]RepoDatabase, 0),
@@ -33,6 +35,7 @@ func ReadRepoMetadata(r io.Reader) (*RepoMetadata, error) {
 	return &md, nil
 }
 
+// Write writes a repomd.xml file to the given io.Writer.
 func (c *RepoMetadata) Write(w io.Writer) error {
 	c.XMLNS = "http://linux.duke.edu/metadata/repo"
 	c.XMLNSRPM = "http://linux.duke.edu/metadata/rpm"

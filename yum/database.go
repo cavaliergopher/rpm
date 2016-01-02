@@ -13,6 +13,8 @@ type RepoDatabase struct {
 	DatabaseVersion int                  `xml:"database_version"`
 }
 
+// RepoDatabaseLocation represents the URI, relative to a package repository,
+// of a repository database.
 type RepoDatabaseLocation struct {
 	Href string `xml:"href,attr"`
 }

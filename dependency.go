@@ -21,7 +21,7 @@ const (
 type Dependency interface {
 	PackageVersion
 
-	// One of EQ, LT, LE, GE or GT
+	// DepFlag constants
 	Flags() int64
 }
 
@@ -37,6 +37,7 @@ type dependency struct {
 // Dependencies are a slice of Dependency interfaces.
 type Dependencies []Dependency
 
+// NewDependency returns a new instance of a package dependency definition.
 func NewDependency(flgs int64, name string, epoch int64, version string, release string) Dependency {
 	return &dependency{
 		flags:   flgs,
@@ -47,6 +48,8 @@ func NewDependency(flgs int64, name string, epoch int64, version string, release
 	}
 }
 
+// String returns a string representation a package dependency in a similar
+// format to `rpm -qR`.
 func (c *dependency) String() string {
 	s := c.name
 
@@ -72,22 +75,28 @@ func (c *dependency) String() string {
 	return s
 }
 
+// Flags determines the nature of the package relationship and the comparison
+// used for the given version constraint.
 func (c *dependency) Flags() int64 {
 	return c.flags
 }
 
+// Name is the name of the package target package.
 func (c *dependency) Name() string {
 	return c.name
 }
 
+// Epoch is the epoch constraint of the target package.
 func (c *dependency) Epoch() int64 {
 	return c.epoch
 }
 
+// Version is the version constraint of the target package.
 func (c *dependency) Version() string {
 	return c.version
 }
 
+// Release is the release constraint of the target package.
 func (c *dependency) Release() string {
 	return c.release
 }
