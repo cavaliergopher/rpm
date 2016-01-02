@@ -8,12 +8,14 @@ import (
 
 // PackageEntry is a RPM package as defined in a yum repository database.
 type PackageEntry struct {
-	key           int64
+	db *PrimaryDatabase
+
+	key           int
 	architecture  string
 	archive_size  int64
 	checksum      string
 	checksum_type string
-	epoch         int64
+	epoch         int
 	install_size  int64
 	locationhref  string
 	name          string
@@ -74,7 +76,7 @@ func (c *PackageEntry) Architecture() string {
 	return c.architecture
 }
 
-func (c *PackageEntry) Epoch() int64 {
+func (c *PackageEntry) Epoch() int {
 	return c.epoch
 }
 
@@ -83,17 +85,33 @@ func (c *PackageEntry) BuildTime() time.Time {
 }
 
 func (c *PackageEntry) Requires() rpm.Dependencies {
-	return nil
+	if deps, err := c.db.dependencies("requires", c.key); err != nil {
+		return nil
+	} else {
+		return deps
+	}
 }
 
 func (c *PackageEntry) Provides() rpm.Dependencies {
-	return nil
+	if deps, err := c.db.dependencies("provides", c.key); err != nil {
+		return nil
+	} else {
+		return deps
+	}
 }
 
 func (c *PackageEntry) Conflicts() rpm.Dependencies {
-	return nil
+	if deps, err := c.db.dependencies("conflicts", c.key); err != nil {
+		return nil
+	} else {
+		return deps
+	}
 }
 
 func (c *PackageEntry) Obsoletes() rpm.Dependencies {
-	return nil
+	if deps, err := c.db.dependencies("obsoletes", c.key); err != nil {
+		return nil
+	} else {
+		return deps
+	}
 }

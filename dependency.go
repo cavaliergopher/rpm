@@ -8,10 +8,10 @@ import (
 // See: https://github.com/rpm-software-management/rpm/blob/master/lib/rpmds.h#L25
 const (
 	DepFlagAny            = 0
-	DepFlagLess           = (1 << 1)
+	DepFlagLesser         = (1 << 1)
 	DepFlagGreater        = (1 << 2)
 	DepFlagEqual          = (1 << 3)
-	DepFlagLesserOrEqual  = (DepFlagEqual | DepFlagLess)
+	DepFlagLesserOrEqual  = (DepFlagEqual | DepFlagLesser)
 	DepFlagGreaterOrEqual = (DepFlagEqual | DepFlagGreater)
 )
 
@@ -22,14 +22,14 @@ type Dependency interface {
 	PackageVersion
 
 	// DepFlag constants
-	Flags() int64
+	Flags() int
 }
 
 // private basic implementation or a package dependency.
 type dependency struct {
-	flags   int64
+	flags   int
 	name    string
-	epoch   int64
+	epoch   int
 	version string
 	release string
 }
@@ -38,7 +38,7 @@ type dependency struct {
 type Dependencies []Dependency
 
 // NewDependency returns a new instance of a package dependency definition.
-func NewDependency(flgs int64, name string, epoch int64, version string, release string) Dependency {
+func NewDependency(flgs int, name string, epoch int, version string, release string) Dependency {
 	return &dependency{
 		flags:   flgs,
 		name:    name,
@@ -77,7 +77,7 @@ func (c *dependency) String() string {
 
 // Flags determines the nature of the package relationship and the comparison
 // used for the given version constraint.
-func (c *dependency) Flags() int64 {
+func (c *dependency) Flags() int {
 	return c.flags
 }
 
@@ -87,7 +87,7 @@ func (c *dependency) Name() string {
 }
 
 // Epoch is the epoch constraint of the target package.
-func (c *dependency) Epoch() int64 {
+func (c *dependency) Epoch() int {
 	return c.epoch
 }
 

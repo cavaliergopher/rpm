@@ -6,7 +6,7 @@ type PackageVersion interface {
 	Name() string
 	Version() string
 	Release() string
-	Epoch() int64
+	Epoch() int
 }
 
 // Package is an interface which represents an RPM package and its supported

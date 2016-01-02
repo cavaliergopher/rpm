@@ -260,7 +260,7 @@ func (c *PackageFile) dependencies(nevrsTagId, flagsTagId, namesTagId, versionsT
 
 	deps := make(Dependencies, len(names))
 	for i := 0; i < len(names); i++ {
-		deps[i] = NewDependency(flgs[i], names[i], 0, vers[i], "")
+		deps[i] = NewDependency(int(flgs[i]), names[i], 0, vers[i], "")
 	}
 
 	return deps

@@ -3,6 +3,7 @@ package yum
 import (
 	"database/sql"
 	"fmt"
+	"github.com/cavaliercoder/go-rpm"
 	_ "github.com/mattn/go-sqlite3"
 	"os"
 )
@@ -31,7 +32,7 @@ CREATE INDEX pkgconflicts on conflicts (pkgKey);
 CREATE INDEX pkgobsoletes on obsoletes (pkgKey);`
 
 const sqlSelectPackages = `SELECT
- pkgKey,
+ pkgKey
  , name
  , arch
  , epoch
@@ -115,7 +116,9 @@ func (c *PrimaryDatabase) Packages() (PackageEntries, error) {
 	// parse each row as a package
 	packages := make(PackageEntries, 0)
 	for rows.Next() {
-		p := PackageEntry{}
+		p := PackageEntry{
+			db: c,
+		}
 
 		// scan the values into the slice
 		if err = rows.Scan(&p.key, &p.name, &p.architecture, &p.epoch, &p.version, &p.release, &p.package_size, &p.install_size, &p.archive_size, &p.locationhref, &p.checksum, &p.checksum_type, &p.time_build); err != nil {
@@ -126,4 +129,53 @@ func (c *PrimaryDatabase) Packages() (PackageEntries, error) {
 	}
 
 	return packages, nil
+}
+
+func (c *PrimaryDatabase) dependencies(table string, pkgKey int) (rpm.Dependencies, error) {
+	q := fmt.Sprintf("SELECT name, flags, epoch, version, release FROM %s WHERE pkgKey = %d", table, pkgKey)
+
+	// open database file
+	db, err := sql.Open("sqlite3", c.dbpath)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	// select packages
+	rows, err := db.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	deps := make(rpm.Dependencies, 0)
+	for rows.Next() {
+		var flgs, name, version, release string
+		var epoch, iflgs int
+
+		if err = rows.Scan(&name, &flgs, &epoch, &version, &release); err != nil {
+			return nil, fmt.Errorf("Error reading dependencies: %v", err)
+		}
+
+		switch flgs {
+		case "EQ":
+			iflgs = rpm.DepFlagEqual
+
+		case "LT":
+			iflgs = rpm.DepFlagLesser
+
+		case "LE":
+			iflgs = rpm.DepFlagLesserOrEqual
+
+		case "GE":
+			iflgs = rpm.DepFlagGreaterOrEqual
+
+		case "GT":
+			iflgs = rpm.DepFlagGreater
+		}
+
+		deps = append(deps, rpm.NewDependency(iflgs, name, epoch, version, release))
+	}
+
+	return deps, nil
 }
