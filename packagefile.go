@@ -307,6 +307,19 @@ func (c *PackageFile) Obsoletes() Dependencies {
 	return c.dependencies(5043, 1114, 1090, 1115)
 }
 
+func (c *PackageFile) Files() []string {
+	ixs := c.Headers[1].Indexes.IntsByTag(1116)
+	names := c.Headers[1].Indexes.StringsByTag(1117)
+	dirs := c.Headers[1].Indexes.StringsByTag(1118)
+
+	files := make([]string, len(names))
+	for i := 0; i < len(names); i++ {
+		files[i] = dirs[ixs[i]] + names[i]
+	}
+
+	return files
+}
+
 func (c *PackageFile) Summary() []string {
 	return c.Headers[1].Indexes.StringsByTag(1004)
 }

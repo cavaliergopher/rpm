@@ -91,7 +91,7 @@ func OpenPrimaryDB(path string) (*PrimaryDatabase, error) {
 	}
 	defer db.Close()
 
-	// TODO: Validate primary_db on open
+	// TODO: Validate primary_db on open, maybe with the db_info table
 
 	return &PrimaryDatabase{
 		dbpath: path,
@@ -131,7 +131,9 @@ func (c *PrimaryDatabase) Packages() (PackageEntries, error) {
 	return packages, nil
 }
 
-func (c *PrimaryDatabase) dependencies(table string, pkgKey int) (rpm.Dependencies, error) {
+// dependencies is called privately by a PackageEntry to list its various
+// dependency types from the primary_db.
+func (c *PrimaryDatabase) DependenciesByPackage(pkgKey int, table string) (rpm.Dependencies, error) {
 	q := fmt.Sprintf("SELECT name, flags, epoch, version, release FROM %s WHERE pkgKey = %d", table, pkgKey)
 
 	// open database file
@@ -148,6 +150,7 @@ func (c *PrimaryDatabase) dependencies(table string, pkgKey int) (rpm.Dependenci
 	}
 	defer rows.Close()
 
+	// parse results
 	deps := make(rpm.Dependencies, 0)
 	for rows.Next() {
 		var flgs, name, version, release string
@@ -178,4 +181,35 @@ func (c *PrimaryDatabase) dependencies(table string, pkgKey int) (rpm.Dependenci
 	}
 
 	return deps, nil
+}
+
+func (c *PrimaryDatabase) FilesByPackage(pkgKey int) ([]string, error) {
+	q := fmt.Sprintf("SELECT name FROM files WHERE pkgKey = %d", pkgKey)
+
+	// open database file
+	db, err := sql.Open("sqlite3", c.dbpath)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	// select packages
+	rows, err := db.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// parse results
+	files := make([]string, 0)
+	for rows.Next() {
+		var file string
+		if err := rows.Scan(&file); err != nil {
+			return nil, fmt.Errorf("Error reading files: %v", err)
+		}
+
+		files = append(files, file)
+	}
+
+	return files, nil
 }

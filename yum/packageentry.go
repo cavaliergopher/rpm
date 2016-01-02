@@ -34,6 +34,11 @@ func (c PackageEntry) String() string {
 	return fmt.Sprintf("%s-%s-%s.%s", c.Name(), c.Version(), c.Release(), c.Architecture())
 }
 
+// Key is the unique identifier of a package within a primary_db
+func (c *PackageEntry) Key() int {
+	return c.key
+}
+
 // LocationHref is the location of the package, relative to the parent
 // repository.
 func (c *PackageEntry) LocationHref() string {
@@ -85,7 +90,7 @@ func (c *PackageEntry) BuildTime() time.Time {
 }
 
 func (c *PackageEntry) Requires() rpm.Dependencies {
-	if deps, err := c.db.dependencies("requires", c.key); err != nil {
+	if deps, err := c.db.DependenciesByPackage(c.key, "requires"); err != nil {
 		return nil
 	} else {
 		return deps
@@ -93,7 +98,7 @@ func (c *PackageEntry) Requires() rpm.Dependencies {
 }
 
 func (c *PackageEntry) Provides() rpm.Dependencies {
-	if deps, err := c.db.dependencies("provides", c.key); err != nil {
+	if deps, err := c.db.DependenciesByPackage(c.key, "provides"); err != nil {
 		return nil
 	} else {
 		return deps
@@ -101,7 +106,7 @@ func (c *PackageEntry) Provides() rpm.Dependencies {
 }
 
 func (c *PackageEntry) Conflicts() rpm.Dependencies {
-	if deps, err := c.db.dependencies("conflicts", c.key); err != nil {
+	if deps, err := c.db.DependenciesByPackage(c.key, "conflicts"); err != nil {
 		return nil
 	} else {
 		return deps
@@ -109,9 +114,17 @@ func (c *PackageEntry) Conflicts() rpm.Dependencies {
 }
 
 func (c *PackageEntry) Obsoletes() rpm.Dependencies {
-	if deps, err := c.db.dependencies("obsoletes", c.key); err != nil {
+	if deps, err := c.db.DependenciesByPackage(c.key, "obsoletes"); err != nil {
 		return nil
 	} else {
 		return deps
+	}
+}
+
+func (c *PackageEntry) Files() []string {
+	if files, err := c.db.FilesByPackage(c.key); err != nil {
+		return nil
+	} else {
+		return files
 	}
 }
