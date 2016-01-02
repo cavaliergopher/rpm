@@ -23,4 +23,6 @@ func TestValidateChecksum(t *testing.T) {
 			t.Errorf("Checksum validation failed for test %d", i+1)
 		}
 	}
+
+	t.Logf("%d checksums validated", len(tests))
 }

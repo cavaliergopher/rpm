@@ -16,7 +16,7 @@ var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)")
 //
 // This function does not consider if the two packages have the same name or if
 // either package has been made obsolete by the other.
-func VersionCompare(a Package, b Package) int {
+func VersionCompare(a PackageVersion, b PackageVersion) int {
 	// compare nils
 	if a == nil && b == nil {
 		return 0

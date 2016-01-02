@@ -2,11 +2,13 @@ package yum
 
 import (
 	"fmt"
+	"github.com/cavaliercoder/go-rpm"
 	"time"
 )
 
 // PackageEntry is a RPM package as defined in a package repository database.
 type PackageEntry struct {
+	key           int64
 	architecture  string
 	archive_size  int64
 	checksum      string
@@ -77,4 +79,20 @@ func (c *PackageEntry) Epoch() int64 {
 
 func (c *PackageEntry) BuildTime() time.Time {
 	return time.Unix(c.time_build, 0)
+}
+
+func (c *PackageEntry) Requires() rpm.Dependencies {
+	return nil
+}
+
+func (c *PackageEntry) Provides() rpm.Dependencies {
+	return nil
+}
+
+func (c *PackageEntry) Conflicts() rpm.Dependencies {
+	return nil
+}
+
+func (c *PackageEntry) Obsoletes() rpm.Dependencies {
+	return nil
 }

@@ -31,7 +31,8 @@ CREATE INDEX pkgconflicts on conflicts (pkgKey);
 CREATE INDEX pkgobsoletes on obsoletes (pkgKey);`
 
 const sqlSelectPackages = `SELECT
- name
+ pkgKey,
+ , name
  , arch
  , epoch
  , version
@@ -117,7 +118,7 @@ func (c *PrimaryDatabase) Packages() (PackageEntries, error) {
 		p := PackageEntry{}
 
 		// scan the values into the slice
-		if err = rows.Scan(&p.name, &p.architecture, &p.epoch, &p.version, &p.release, &p.package_size, &p.install_size, &p.archive_size, &p.locationhref, &p.checksum, &p.checksum_type, &p.time_build); err != nil {
+		if err = rows.Scan(&p.key, &p.name, &p.architecture, &p.epoch, &p.version, &p.release, &p.package_size, &p.install_size, &p.archive_size, &p.locationhref, &p.checksum, &p.checksum_type, &p.time_build); err != nil {
 			return nil, fmt.Errorf("Error scanning packages: %v", err)
 		}
 

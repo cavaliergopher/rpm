@@ -2,6 +2,7 @@ package rpm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"math"
@@ -9,7 +10,7 @@ import (
 	"time"
 )
 
-// A PackageFile is an RPM package.
+// A PackageFile is an RPM package loaded from a stored filed.
 type PackageFile struct {
 	Lead    Lead
 	Headers Headers
@@ -40,7 +41,7 @@ type Headers []Header
 
 // OpenPackageFile reads a rpm package from the file systems and returns a pointer
 // to it.
-func OpenPackageFile(path string) (Package, error) {
+func OpenPackageFile(path string) (*PackageFile, error) {
 	// open file
 	f, err := os.Open(path)
 	if err != nil {
@@ -52,7 +53,7 @@ func OpenPackageFile(path string) (Package, error) {
 }
 
 // ReadPackageFile reads a rpm package from a stream and returns a pointer to it.
-func ReadPackageFile(r io.Reader) (Package, error) {
+func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	p := &PackageFile{}
 
 	// read the deprecated "lead"
@@ -146,41 +147,64 @@ func ReadPackageFile(r io.Reader) (Package, error) {
 
 		for x := 0; x < h.IndexCount; x++ {
 			index := h.Indexes[x]
+			o := index.Offset
 
 			switch index.Type {
 			case IndexDataTypeChar:
-				index.Value = uint8(store[index.Offset])
-				break
+				vals := make([]uint8, index.ItemCount)
+				for v := int64(0); v < index.ItemCount; v++ {
+					vals[v] = uint8(store[o])
+					o += 1
+				}
+
+				index.Value = vals
 
 			case IndexDataTypeInt8:
-				index.Value = int8(store[index.Offset])
-				break
+				vals := make([]int8, index.ItemCount)
+				for v := int64(0); v < index.ItemCount; v++ {
+					vals[v] = int8(store[o])
+					o += 1
+				}
+
+				index.Value = vals
 
 			case IndexDataTypeInt16:
-				index.Value = (int16(store[index.Offset]) << 8) + int16(store[index.Offset+1])
-				break
+				vals := make([]int16, index.ItemCount)
+				for v := int64(0); v < index.ItemCount; v++ {
+					vals[v] = int16(binary.BigEndian.Uint16(store[o : o+2]))
+					o += 2
+				}
+
+				index.Value = vals
 
 			case IndexDataTypeInt32:
-				index.Value = (int32(store[index.Offset]) << 24) + (int32(store[index.Offset+1]) << 16) + (int32(store[index.Offset+2]) << 8) + int32(store[index.Offset+3])
-				break
+				vals := make([]int32, index.ItemCount)
+				for v := int64(0); v < index.ItemCount; v++ {
+					vals[v] = int32(binary.BigEndian.Uint32(store[o : o+4]))
+					o += 4
+				}
+
+				index.Value = vals
 
 			case IndexDataTypeInt64:
-				index.Value = (int64(store[index.Offset]) << 56) + (int64(store[index.Offset+1]) << 48) + (int64(store[index.Offset+2]) << 40) + (int64(store[index.Offset+3]) << 32) + (int64(store[index.Offset+4]) << 24) + (int64(store[index.Offset+5]) << 16) + (int64(store[index.Offset+6]) << 8) + int64(store[index.Offset+7])
-				break
+				vals := make([]int64, index.ItemCount)
+				for v := int64(0); v < index.ItemCount; v++ {
+					vals[v] = int64(binary.BigEndian.Uint64(store[o : o+8]))
+					o += 8
+				}
+
+				index.Value = vals
 
 			case IndexDataTypeBinary:
 				b := make([]byte, index.ItemCount)
-				copy(b, store[index.Offset:index.Offset+index.ItemCount])
+				copy(b, store[o:o+index.ItemCount])
 
 				index.Value = b
-
-				break
 
 			case IndexDataTypeString, IndexDataTypeStringArray, IndexDataTypeI8NString:
 				vals := make([]string, index.ItemCount)
 
-				o := index.Offset
-				for s := 0; int64(s) < index.ItemCount; s++ {
+				for s := 0; s < int(index.ItemCount); s++ {
 					// calculate string length
 					var j int64
 					for j = 0; store[int64(j)+o] != 0; j++ {
@@ -188,12 +212,9 @@ func ReadPackageFile(r io.Reader) (Package, error) {
 
 					vals[s] = string(store[o : o+j])
 					o += j + 1
-
 				}
 
 				index.Value = vals
-
-				break
 			}
 
 			// save in array
@@ -223,6 +244,23 @@ func ReadPackageFile(r io.Reader) (Package, error) {
 	return p, nil
 }
 
+// dependencies translates the given tag values into a slice of package
+// relationships such as provides, conflicts, obsoletes and requires.
+func (c *PackageFile) dependencies(nevrsTagId, flagsTagId, namesTagId, versionsTagId int64) Dependencies {
+	// TODO: Implement NEVRS tags
+
+	flgs := c.Headers[1].Indexes.GetInts(flagsTagId)
+	names := c.Headers[1].Indexes.GetStrings(namesTagId)
+	vers := c.Headers[1].Indexes.GetStrings(versionsTagId)
+
+	deps := make(Dependencies, len(names))
+	for i := 0; i < len(names); i++ {
+		deps[i] = NewDependency(flgs[i], names[i], 0, vers[i], "")
+	}
+
+	return deps
+}
+
 // String reassembles package metadata to form a standard rpm package name;
 // including the package name, version, release and architecture.
 func (c *PackageFile) String() string {
@@ -246,6 +284,22 @@ func (c *PackageFile) Release() string {
 
 func (c *PackageFile) Epoch() int64 {
 	return c.Headers[1].Indexes.GetInt(1003)
+}
+
+func (c *PackageFile) Requires() Dependencies {
+	return c.dependencies(5041, 1048, 1049, 1050)
+}
+
+func (c *PackageFile) Provides() Dependencies {
+	return c.dependencies(5042, 1112, 1047, 1113)
+}
+
+func (c *PackageFile) Conflicts() Dependencies {
+	return c.dependencies(5044, 1053, 1054, 1055)
+}
+
+func (c *PackageFile) Obsoletes() Dependencies {
+	return c.dependencies(5043, 1114, 1090, 1115)
 }
 
 func (c *PackageFile) Summary() []string {
@@ -350,14 +404,6 @@ func (c *PackageFile) Icon() []byte {
 
 func (c *PackageFile) SourceRPM() string {
 	return c.Headers[1].Indexes.GetString(1044)
-}
-
-func (c *PackageFile) Provides() []string {
-	return c.Headers[1].Indexes.GetStrings(1047)
-}
-
-func (c *PackageFile) Requires() []string {
-	return c.Headers[1].Indexes.GetStrings(1049)
 }
 
 func (c *PackageFile) RPMVersion() string {
