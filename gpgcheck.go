@@ -17,8 +17,8 @@ var (
 // io.Reader. An MD5 checksum is computed for the package payload and compared
 // with the checksum value specified in the package header.
 //
-// If validation succeeds, nil is returned. If validation fails, a GPGCheckError
-// is returned.
+// If validation succeeds, nil is returned. If validation fails,
+// ErrMD5ValidationFailed is returned.
 //
 // This function is an expensive operation which reads the entire package file.
 func MD5Check(r io.Reader) error {
@@ -51,7 +51,7 @@ func md5check(r io.Reader) (*Header, []byte, error) {
 	// get expected payload md5 sum
 	sigmd5 := sigheader.Indexes.BytesByTag(1004)
 	if sigmd5 == nil {
-		return nil, nil, fmt.Errorf("No signature md5 sum found")
+		return nil, nil, fmt.Errorf("No payload md5 sum specified")
 	}
 
 	// compute payload sum
