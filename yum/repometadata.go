@@ -35,7 +35,8 @@ func ReadRepoMetadata(r io.Reader) (*RepoMetadata, error) {
 	return &md, nil
 }
 
-// Write writes a repomd.xml file to the given io.Writer.
+// Write encodes a RepoMetadata struct in the repomd.xml format to the given
+// io.Writer stream.
 func (c *RepoMetadata) Write(w io.Writer) error {
 	c.XMLNS = "http://linux.duke.edu/metadata/repo"
 	c.XMLNSRPM = "http://linux.duke.edu/metadata/rpm"
