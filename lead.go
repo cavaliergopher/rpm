@@ -44,11 +44,11 @@ func ReadPackageLead(r io.Reader) (*Lead, error) {
 
 	// decode lead
 	lead := &Lead{
-		VersionMajor:    int(b[5]),
-		VersionMinor:    int(b[6]),
-		Type:            int(binary.BigEndian.Uint16(b[7:9])),
-		Architecture:    int(binary.BigEndian.Uint16(b[9:11])),
-		Name:            string(b[10:77]),
+		VersionMajor:    int(b[4]),
+		VersionMinor:    int(b[5]),
+		Type:            int(binary.BigEndian.Uint16(b[6:8])),
+		Architecture:    int(binary.BigEndian.Uint16(b[8:10])),
+		Name:            string(b[10:76]),
 		OperatingSystem: int(binary.BigEndian.Uint16(b[76:78])),
 		SignatureType:   int(binary.BigEndian.Uint16(b[78:80])),
 	}
