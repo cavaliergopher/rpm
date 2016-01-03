@@ -163,7 +163,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	o := 8 - int(math.Mod(float64(h.Length), 8))
 
 	// seek to next header
-	if o > 0 {
+	if o > 0 && o < 8 {
 		pad := make([]byte, o)
 		n, err = r.Read(pad)
 		if err != nil {
