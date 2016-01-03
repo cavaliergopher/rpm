@@ -92,10 +92,11 @@ func rpmvercmp(a, b string) int {
 		}
 
 		// string compare
-		if rc := strings.Compare(a, b); rc != 0 {
-			return rc
+		if a < b {
+			return -1
+		} else if a > b {
+			return 1
 		}
-
 	}
 
 	// segments were all the same but separators must have been different
