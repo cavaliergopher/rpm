@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+// ExampleMD5Check validates a local rpm package named 'my-package' using the
+// MD5 checksum value specified in the package header.
 func ExampleMD5Check() {
 	// open a rpm package for reading
 	f, err := os.Open("my-package.rpm")
