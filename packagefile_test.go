@@ -1,6 +1,7 @@
 package rpm
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -8,50 +9,54 @@ import (
 	"testing"
 )
 
-func TestReadRPMFile(t *testing.T) {
+func packages(t *testing.T) ([]string, error) {
 	// get a directory full of rpms from RPM_DIR environment variable or
 	// failback to ./fixtures
-	dir := os.Getenv("RPM_DIR")
-	if dir == "" {
-		dir = "fixtures"
+	path := os.Getenv("RPM_DIR")
+	if path == "" {
+		path = "fixtures"
 	}
 
 	// list RPM files
-	files, err := ioutil.ReadDir(dir)
+	t.Logf("Loading package files in %s...", path)
+	dir, err := ioutil.ReadDir(path)
 	if err != nil {
-		t.Fatalf(err.Error())
+		return nil, err
 	}
 
-	valid := 0
-	for _, f := range files {
+	files := make([]string, 0)
+	for _, f := range dir {
 		if strings.HasSuffix(f.Name(), ".rpm") {
-			path := filepath.Join(dir, f.Name())
-
-			// MD5 Check
-			f, _ := os.Open(path)
-			defer f.Close()
-
-			if err := MD5Check(f); err != nil {
-				t.Errorf("Validation error for %s: %v", f.Name(), err)
-				//os.Remove(path)
-			}
-			f.Close()
-
-			// Load package info
-			rpm, err := OpenPackageFile(path)
-			if err != nil {
-				t.Errorf("Error loading RPM file %s: %s", f.Name(), err)
-				//os.Remove(path)
-			} else {
-				t.Logf("Loaded package: %v", rpm)
-				valid++
-			}
+			files = append(files, filepath.Join("fixtures", f.Name()))
 		}
 	}
 
-	if valid == 0 {
-		t.Errorf("No RPM files found for testing with in %s", dir)
-	} else {
-		t.Logf("Validated %d RPM files", valid)
+	if len(files) == 0 {
+		return nil, fmt.Errorf("No rpm packages found for testing")
 	}
+
+	return files, nil
+}
+
+func TestReadRPMFile(t *testing.T) {
+	// load package file paths
+	files, err := packages(t)
+	if err != nil {
+		t.Fatalf("Error listing rpm packages: %v", err)
+	}
+
+	valid := 0
+	for _, path := range files {
+		// Load package info
+		rpm, err := OpenPackageFile(path)
+		if err != nil {
+			t.Errorf("Error loading RPM file %s: %s", path, err)
+			//os.Remove(path)
+		} else {
+			t.Logf("Loaded package: %v", rpm)
+			valid++
+		}
+	}
+
+	t.Logf("Validated %d RPM files", valid)
 }
