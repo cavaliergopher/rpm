@@ -1,4 +1,4 @@
-package rpm
+package rpm_test
 
 import (
 	"fmt"

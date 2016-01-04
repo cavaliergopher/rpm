@@ -1,4 +1,4 @@
-package yum
+package yum_test
 
 import (
 	"fmt"
