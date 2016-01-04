@@ -4,3 +4,5 @@ go:
     - 1.5
 
 install: make get-deps
+
+script: make test
