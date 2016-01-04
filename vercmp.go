@@ -14,6 +14,9 @@ var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)")
 // VersionCompare compares the version details of two packages. Versions are
 // compared by Epoch, Version and Release in descending order of precedence.
 //
+// If a is more recent than b, 1 is returned. If a is less recent than b, -1 is
+// returned. If a and b are equal, 0 is returned.
+//
 // This function does not consider if the two packages have the same name or if
 // either package has been made obsolete by the other.
 func VersionCompare(a PackageVersion, b PackageVersion) int {
