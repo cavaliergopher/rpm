@@ -8,12 +8,11 @@ import (
 	"os"
 )
 
-// ExampleGPGCheck loads a public key from /etc/pki/rpm-gpg/RPM-GPG-KEY-MY-KEY
-// and uses it to validate the signature in a local rpm package named
-// 'my-package.rpm'.
+// ExampleGPGCheck reads a public GPG key and uses it to validate the signature
+// of a local rpm package.
 func ExampleGPGCheck() {
-	// open gpgkey file
-	f_gpgkey, err := os.Open("/etc/pki/rpm-gpg/RPM-GPG-KEY-MY-KEY")
+	// open gpgkey file (typically in /etc/pki/rpm-gpg)
+	f_gpgkey, err := os.Open("fixtures/RPM-GPG-KEY-CentOS-7")
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +32,7 @@ func ExampleGPGCheck() {
 	}
 
 	// open a rpm package for reading
-	f_rpm, err := os.Open("my-package.rpm")
+	f_rpm, err := os.Open("fixtures/centos-release-7-2.1511.el7.centos.2.10.x86_64.rpm")
 	if err != nil {
 		panic(err)
 	}
@@ -48,4 +47,6 @@ func ExampleGPGCheck() {
 	} else {
 		panic(err)
 	}
+
+	// Output: Package signed by 'CentOS-7 Key (CentOS 7 Official Signing Key) <security@centos.org>'
 }

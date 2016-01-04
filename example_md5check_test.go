@@ -6,11 +6,11 @@ import (
 	"os"
 )
 
-// ExampleMD5Check validates a local rpm package named 'my-package' using the
-// MD5 checksum value specified in the package header.
+// ExampleMD5Check validates a local rpm package named using the MD5 checksum
+// value specified in the package header.
 func ExampleMD5Check() {
 	// open a rpm package for reading
-	f, err := os.Open("my-package.rpm")
+	f, err := os.Open("fixtures/centos-release-7-2.1511.el7.centos.2.10.x86_64.rpm")
 	if err != nil {
 		panic(err)
 	}
@@ -25,4 +25,6 @@ func ExampleMD5Check() {
 	} else {
 		panic(err)
 	}
+
+	// Output: Package passed checksum validation
 }

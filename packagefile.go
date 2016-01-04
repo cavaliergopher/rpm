@@ -110,8 +110,8 @@ func (c *PackageFile) Release() string {
 	return c.Headers[1].Indexes.StringByTag(1002)
 }
 
-func (c *PackageFile) Epoch() int64 {
-	return c.Headers[1].Indexes.IntByTag(1003)
+func (c *PackageFile) Epoch() int {
+	return int(c.Headers[1].Indexes.IntByTag(1003))
 }
 
 func (c *PackageFile) Requires() Dependencies {
