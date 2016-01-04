@@ -159,10 +159,10 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		h.Indexes[x] = index
 	}
 
-	// calculate location of next header by padding to a multiple of 8
+	// calculate location of the end of the header by padding to a multiple of 8
 	o := 8 - int(math.Mod(float64(h.Length), 8))
 
-	// seek to next header
+	// seek to the end of the header
 	if o > 0 && o < 8 {
 		pad := make([]byte, o)
 		n, err = r.Read(pad)

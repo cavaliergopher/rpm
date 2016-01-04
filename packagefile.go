@@ -12,6 +12,8 @@ import (
 type PackageFile struct {
 	Lead    Lead
 	Headers Headers
+
+	path string
 }
 
 // OpenPackageFile reads a rpm package from the file systems and returns a pointer
@@ -24,7 +26,14 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 	}
 	defer f.Close()
 
-	return ReadPackageFile(f)
+	// read package content
+	p, err := ReadPackageFile(f)
+	if err == nil {
+		// set file path
+		p.path = path
+	}
+
+	return p, err
 }
 
 // ReadPackageFile reads a rpm package file from a stream and returns a pointer
@@ -32,6 +41,8 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	// See: http://www.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
 	p := &PackageFile{}
+
+	// TODO: benchmark package reader with and without buffered io
 
 	// read the deprecated "lead"
 	lead, err := ReadPackageLead(r)
@@ -41,17 +52,14 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 
 	p.Lead = *lead
 
-	// parse headers
-	p.Headers = make(Headers, 2)
-
 	// read signature and header headers
+	p.Headers = make(Headers, 2)
 	for i := 0; i < 2; i++ {
 		h, err := ReadPackageHeader(r)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%v (v%d.%d)", err, lead.VersionMajor, lead.VersionMinor)
 		}
 
-		// add header
 		p.Headers[i] = *h
 	}
 
@@ -75,14 +83,20 @@ func (c *PackageFile) dependencies(nevrsTagId, flagsTagId, namesTagId, versionsT
 	return deps
 }
 
-// String reassembles package metadata to form a standard rpm package name;
-// including the package name, version, release and architecture.
+// String returns the package identifier in the form
+// '[name]-[version]-[release].[architecture]'.
 func (c *PackageFile) String() string {
 	return fmt.Sprintf("%s-%s-%s.%s", c.Name(), c.Version(), c.Release(), c.Architecture())
 }
 
+// Path returns the path which was given to open a package file if it was opened
+// with OpenPackageFile.
+func (c *PackageFile) Path() string {
+	return c.path
+}
+
 // For tag definitions, see:
-// https://github.com/rpm-software-management/rpm/blob/master/lib/rpmtag.h
+// https://github.com/rpm-software-management/rpm/blob/master/lib/rpmtag.h#L61
 
 func (c *PackageFile) Name() string {
 	return c.Headers[1].Indexes.StringByTag(1000)

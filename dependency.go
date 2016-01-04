@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-// RPM dependency flags.
-// See: https://github.com/rpm-software-management/rpm/blob/master/lib/rpmds.h#L25
+// Dependency flags indicate how versions comparisons should be computed when
+// comparing versions of dependent packages.
 const (
 	DepFlagAny            = 0
 	DepFlagLesser         = (1 << 1)
@@ -15,9 +15,14 @@ const (
 	DepFlagGreaterOrEqual = (DepFlagEqual | DepFlagGreater)
 )
 
+// See: https://github.com/rpm-software-management/rpm/blob/master/lib/rpmds.h#L25
+
 // Dependency is an interface which represents a relationship between two
 // packages. It might indicate that one package requires, conflicts with,
 // obsoletes or provides another package.
+//
+// Dependency implements the PackageVersion interface and so may be used when
+// comparing versions with other types of packages.
 type Dependency interface {
 	PackageVersion
 
