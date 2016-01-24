@@ -10,7 +10,7 @@ import (
 // value specified in the package header.
 func ExampleMD5Check() {
 	// open a rpm package for reading
-	f, err := os.Open("fixtures/centos-release-7-2.1511.el7.centos.2.10.x86_64.rpm")
+	f, err := os.Open("testdata/centos-release-7-2.1511.el7.centos.2.10.x86_64.rpm")
 	if err != nil {
 		panic(err)
 	}

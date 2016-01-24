@@ -33,8 +33,8 @@ func TestMD5Check(t *testing.T) {
 }
 
 func TestGPGCheck(t *testing.T) {
-	// read fixtures directory
-	dir, err := ioutil.ReadDir("fixtures")
+	// read testdata directory
+	dir, err := ioutil.ReadDir("testdata")
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -43,7 +43,7 @@ func TestGPGCheck(t *testing.T) {
 	keyfiles := make([]string, 0)
 	for _, fi := range dir {
 		if strings.HasPrefix(fi.Name(), "RPM-GPG-KEY-") {
-			keyfiles = append(keyfiles, filepath.Join("fixtures", fi.Name()))
+			keyfiles = append(keyfiles, filepath.Join("testdata", fi.Name()))
 		}
 	}
 

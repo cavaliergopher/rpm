@@ -10,13 +10,13 @@ import (
 // of a local rpm package.
 func ExampleGPGCheck() {
 	// read public key from gpgkey file
-	keyring, err := rpm.KeyRingFromFile("fixtures/RPM-GPG-KEY-CentOS-7")
+	keyring, err := rpm.KeyRingFromFile("testdata/RPM-GPG-KEY-CentOS-7")
 	if err != nil {
 		panic(err)
 	}
 
 	// open a rpm package for reading
-	f, err := os.Open("fixtures/centos-release-7-2.1511.el7.centos.2.10.x86_64.rpm")
+	f, err := os.Open("testdata/centos-release-7-2.1511.el7.centos.2.10.x86_64.rpm")
 	if err != nil {
 		panic(err)
 	}

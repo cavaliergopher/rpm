@@ -36,6 +36,8 @@ func KeyRingFromFile(path string) (openpgp.KeyRing, error) {
 
 // KeyRingFromFiles reads a openpgp.KeyRing from the given file paths which may
 // then be used to validate GPG keys in RPM packages.
+//
+// This function might typically be used to read all keys in /etc/pki/rpm-gpg.
 func KeyRingFromFiles(files []string) (openpgp.KeyRing, error) {
 	keyring := make(openpgp.EntityList, 0)
 	for _, path := range files {

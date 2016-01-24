@@ -11,7 +11,7 @@ import (
 // the package with the highest version.
 func ExampleVersionCompare() {
 	// list files in directory
-	dir, err := ioutil.ReadDir("fixtures")
+	dir, err := ioutil.ReadDir("testdata")
 	if err != nil {
 		panic(err)
 	}
@@ -21,7 +21,7 @@ func ExampleVersionCompare() {
 	for _, f := range dir {
 		if strings.HasSuffix(f.Name(), ".rpm") {
 			// read package file
-			pkg, err := rpm.OpenPackageFile("fixtures/" + f.Name())
+			pkg, err := rpm.OpenPackageFile("testdata/" + f.Name())
 			if err != nil {
 				panic(err)
 			}

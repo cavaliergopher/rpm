@@ -11,10 +11,10 @@ import (
 
 func packages(t *testing.T) ([]string, error) {
 	// get a directory full of rpms from RPM_DIR environment variable or
-	// failback to ./fixtures
+	// failback to ./testdata
 	path := os.Getenv("RPM_DIR")
 	if path == "" {
-		path = "fixtures"
+		path = "testdata"
 	}
 
 	// list RPM files
@@ -27,7 +27,7 @@ func packages(t *testing.T) ([]string, error) {
 	files := make([]string, 0)
 	for _, f := range dir {
 		if strings.HasSuffix(f.Name(), ".rpm") {
-			files = append(files, filepath.Join("fixtures", f.Name()))
+			files = append(files, filepath.Join(path, f.Name()))
 		}
 	}
 
