@@ -9,7 +9,7 @@ A native implementation of the RPM file specification in Go.
 	)
 
 	func main() {
-		p, err := rpm.OpenPackage("my-package.rpm")
+		p, err := rpm.OpenPackageFile("my-package.rpm")
 		if err != nil {
 			panic(err)
 		}

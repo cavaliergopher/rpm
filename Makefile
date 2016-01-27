@@ -4,7 +4,8 @@ build:
 	go build -x
 
 test:
-	go test -v
+	go test -v && cd yum && go test -v
 
 get-deps:
-	go get -u github.com/mattn/go-sqlite3
+	go get github.com/mattn/go-sqlite3
+	go get golang.org/x/crypto/openpgp

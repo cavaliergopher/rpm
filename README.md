@@ -1,4 +1,4 @@
-# go-rpm [![GoDoc](https://godoc.org/github.com/cavaliercoder/go-rpm?status.svg)](https://godoc.org/github.com/cavaliercoder/go-rpm)
+# go-rpm [![Build Status](https://travis-ci.org/cavaliercoder/go-rpm.svg?branch=master)](https://travis-ci.org/cavaliercoder/go-rpm) [![GoDoc](https://godoc.org/github.com/cavaliercoder/go-rpm?status.svg)](https://godoc.org/github.com/cavaliercoder/go-rpm)
 
 A native implementation of the RPM file specification in Go.
 
@@ -13,6 +13,25 @@ features such as:
 
 * Reading of modern and legacy rpm package file formats
 * Reading, creating and updating modern and legacy yum repository metadata
+* Reading of the rpm database
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/cavaliercoder/go-rpm"
+)
+
+func main() {
+	p, err := rpm.OpenPackageFile("my-package.rpm")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Loaded package: %v", p)
+}
+```
 
 
 ## License
