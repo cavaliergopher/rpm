@@ -277,10 +277,12 @@ func (c *PackageFile) Size() uint64 {
 // ArchiveSize specifies the size of the archived payload of the package in
 // bytes.
 func (c *PackageFile) ArchiveSize() uint64 {
+	// RPMSIGTAG_PAYLOADSIZE
 	if i := uint64(c.Headers[0].Indexes.IntByTag(1007)); i > 0 {
 		return i
 	}
 
+	// else RPMTAG_ARCHIVESIZE
 	return uint64(c.Headers[1].Indexes.IntByTag(1046))
 }
 

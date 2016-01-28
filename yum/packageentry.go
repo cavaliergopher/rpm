@@ -39,9 +39,9 @@ func (c *PackageEntry) Key() int {
 	return c.key
 }
 
-// LocationHref is the location of the package, relative to the parent
+// Path is the location of the package, relative to the parent
 // repository.
-func (c *PackageEntry) LocationHref() string {
+func (c *PackageEntry) Path() string {
 	return c.locationhref
 }
 
