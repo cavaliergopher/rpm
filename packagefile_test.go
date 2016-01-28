@@ -73,3 +73,22 @@ func TestReadRPMDirectory(t *testing.T) {
 		t.Errorf("Expected %d packages in directory; got %d", expected, len(packages))
 	}
 }
+
+func TestChecksum(t *testing.T) {
+	path := "./testdata/epel-release-7-5.noarch.rpm"
+	expected := "d6f332ed157de1d42058ec785b392a1cc4b5836c27830af8fbf083cce29ef0ab"
+
+	p, err := OpenPackageFile(path)
+	if err != nil {
+		t.Fatalf("Error opening %s: %v", path, err)
+	}
+
+	sum, err := p.Checksum()
+	if err != nil {
+		t.Errorf("Error validating checksum for %s: %v", path, err)
+	} else {
+		if sum != expected {
+			t.Errorf("Expected sum %s for %s; got %s", expected, path, sum)
+		}
+	}
+}

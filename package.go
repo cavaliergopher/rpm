@@ -20,6 +20,9 @@ type Package interface {
 	Conflicts() Dependencies
 	Obsoletes() Dependencies
 	Provides() Dependencies
+
+	Checksum() (string, error)
+	ChecksumType() string
 }
 
 // Packages is a slice of Package interfaces.

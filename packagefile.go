@@ -1,6 +1,8 @@
 package rpm
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -128,6 +130,32 @@ func (c *PackageFile) String() string {
 // with OpenPackageFile.
 func (c *PackageFile) Path() string {
 	return c.path
+}
+
+// Checksum computes and returns the SHA256 checksum (encoded in hexidecimal) of
+// the package file.
+func (c *PackageFile) Checksum() (string, error) {
+	if c.Path() == "" {
+		return "", fmt.Errorf("File not found")
+	}
+
+	if f, err := os.Open(c.Path()); err != nil {
+		return "", err
+	} else {
+		defer f.Close()
+
+		s := sha256.New()
+		if _, err := io.Copy(s, f); err != nil {
+			return "", err
+		}
+
+		return hex.EncodeToString(s.Sum(nil)), nil
+	}
+}
+
+// ChecksumType returns "sha256"
+func (c *PackageFile) ChecksumType() string {
+	return "sha256"
 }
 
 // For tag definitions, see:
