@@ -60,3 +60,16 @@ func TestReadRPMFile(t *testing.T) {
 
 	t.Logf("Validated %d RPM files", valid)
 }
+
+func TestReadRPMDirectory(t *testing.T) {
+	expected := 10
+	packages, err := OpenPackageFiles("./testdata")
+	if err != nil {
+		t.Fatalf("Error reading RPMs in directory: %v", err)
+	}
+
+	// count packages
+	if len(packages) != expected {
+		t.Errorf("Expected %d packages in directory; got %d", expected, len(packages))
+	}
+}

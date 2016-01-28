@@ -3,7 +3,10 @@ package rpm
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -34,6 +37,38 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 	}
 
 	return p, err
+}
+
+// OpenPackageFiles reads all rpm packages with the .rpm suffix from the given
+// directory on the file systems and returns a slice of pointers to the loaded
+// packages.
+func OpenPackageFiles(path string) ([]*PackageFile, error) {
+	// read directory
+	dir, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// list *.rpm files
+	files := make([]string, 0)
+	for _, f := range dir {
+		if strings.HasSuffix(f.Name(), ".rpm") {
+			files = append(files, filepath.Join(path, f.Name()))
+		}
+	}
+
+	// read packages
+	packages := make([]*PackageFile, len(files))
+	for i, f := range files {
+		p, err := OpenPackageFile(f)
+		if err != nil {
+			return nil, err
+		}
+
+		packages[i] = p
+	}
+
+	return packages, nil
 }
 
 // ReadPackageFile reads a rpm package file from a stream and returns a pointer
