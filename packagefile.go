@@ -269,11 +269,18 @@ func (c *PackageFile) InstallTime() time.Time {
 	return c.Headers[1].Indexes.TimeByTag(1008)
 }
 
+// Size specifies the disk space consumed by installation of the package.
 func (c *PackageFile) Size() uint64 {
 	return uint64(c.Headers[1].Indexes.IntByTag(1009))
 }
 
+// ArchiveSize specifies the size of the archived payload of the package in
+// bytes.
 func (c *PackageFile) ArchiveSize() uint64 {
+	if i := uint64(c.Headers[0].Indexes.IntByTag(1007)); i > 0 {
+		return i
+	}
+
 	return uint64(c.Headers[1].Indexes.IntByTag(1046))
 }
 
