@@ -14,6 +14,8 @@ type Header struct {
 	IndexCount int
 	Length     int
 	Indexes    IndexEntries
+	Start      int
+	End        int
 }
 
 // Headers is an array of Header structs.

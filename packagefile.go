@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,12 +19,62 @@ type PackageFile struct {
 	Lead    Lead
 	Headers Headers
 
-	path string
+	path     string
+	fileSize uint64
+	fileTime time.Time
+}
+
+// ReadPackageFile reads a rpm package file from a stream and returns a pointer
+// to it.
+func ReadPackageFile(r io.Reader) (*PackageFile, error) {
+	// See: http://www.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
+	p := &PackageFile{}
+
+	// read the deprecated "lead"
+	lead, err := ReadPackageLead(r)
+	if err != nil {
+		return nil, err
+	}
+
+	p.Lead = *lead
+
+	// read signature and header headers
+	offset := 96
+	p.Headers = make(Headers, 2)
+	for i := 0; i < 2; i++ {
+		// parse header
+		h, err := ReadPackageHeader(r)
+		if err != nil {
+			return nil, fmt.Errorf("%v (v%d.%d)", err, lead.VersionMajor, lead.VersionMinor)
+		}
+
+		// set start and end offsets
+		h.Start = offset
+		h.End = h.Start + 16 + (16 * h.IndexCount) + h.Length
+		offset = h.End
+
+		// calculate location of the end of the header by padding to a multiple of 8
+		pad := 8 - int(math.Mod(float64(h.Length), 8))
+		if pad < 8 {
+			offset += pad
+		}
+
+		// append
+		p.Headers[i] = *h
+	}
+
+	return p, nil
 }
 
 // OpenPackageFile reads a rpm package from the file systems and returns a pointer
 // to it.
 func OpenPackageFile(path string) (*PackageFile, error) {
+	// stat file
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
 	// open file
 	f, err := os.Open(path)
 	if err != nil {
@@ -37,6 +88,10 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 		// set file path
 		p.path = path
 	}
+
+	// set file stats
+	p.fileSize = uint64(fi.Size())
+	p.fileTime = fi.ModTime()
 
 	return p, err
 }
@@ -73,36 +128,6 @@ func OpenPackageFiles(path string) ([]*PackageFile, error) {
 	return packages, nil
 }
 
-// ReadPackageFile reads a rpm package file from a stream and returns a pointer
-// to it.
-func ReadPackageFile(r io.Reader) (*PackageFile, error) {
-	// See: http://www.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
-	p := &PackageFile{}
-
-	// TODO: benchmark package reader with and without buffered io
-
-	// read the deprecated "lead"
-	lead, err := ReadPackageLead(r)
-	if err != nil {
-		return nil, err
-	}
-
-	p.Lead = *lead
-
-	// read signature and header headers
-	p.Headers = make(Headers, 2)
-	for i := 0; i < 2; i++ {
-		h, err := ReadPackageHeader(r)
-		if err != nil {
-			return nil, fmt.Errorf("%v (v%d.%d)", err, lead.VersionMajor, lead.VersionMinor)
-		}
-
-		p.Headers[i] = *h
-	}
-
-	return p, nil
-}
-
 // dependencies translates the given tag values into a slice of package
 // relationships such as provides, conflicts, obsoletes and requires.
 func (c *PackageFile) dependencies(nevrsTagId, flagsTagId, namesTagId, versionsTagId int) Dependencies {
@@ -132,6 +157,16 @@ func (c *PackageFile) Path() string {
 	return c.path
 }
 
+// FileTime returns the time at which the RPM was last modified if known.
+func (c *PackageFile) FileTime() time.Time {
+	return c.fileTime
+}
+
+// FileSize returns the size of the package file in bytes.
+func (c *PackageFile) FileSize() uint64 {
+	return c.fileSize
+}
+
 // Checksum computes and returns the SHA256 checksum (encoded in hexidecimal) of
 // the package file.
 func (c *PackageFile) Checksum() (string, error) {
@@ -156,6 +191,14 @@ func (c *PackageFile) Checksum() (string, error) {
 // ChecksumType returns "sha256"
 func (c *PackageFile) ChecksumType() string {
 	return "sha256"
+}
+
+func (c *PackageFile) HeaderStart() uint64 {
+	return uint64(c.Headers[1].Start)
+}
+
+func (c *PackageFile) HeaderEnd() uint64 {
+	return uint64(c.Headers[1].End)
 }
 
 // For tag definitions, see:
@@ -206,12 +249,12 @@ func (c *PackageFile) Files() []string {
 	return files
 }
 
-func (c *PackageFile) Summary() []string {
-	return c.Headers[1].Indexes.StringsByTag(1004)
+func (c *PackageFile) Summary() string {
+	return strings.Join(c.Headers[1].Indexes.StringsByTag(1004), "\n")
 }
 
-func (c *PackageFile) Description() []string {
-	return c.Headers[1].Indexes.StringsByTag(1005)
+func (c *PackageFile) Description() string {
+	return strings.Join(c.Headers[1].Indexes.StringsByTag(1005), "\n")
 }
 
 func (c *PackageFile) BuildTime() time.Time {
@@ -226,8 +269,12 @@ func (c *PackageFile) InstallTime() time.Time {
 	return c.Headers[1].Indexes.TimeByTag(1008)
 }
 
-func (c *PackageFile) Size() int64 {
-	return c.Headers[1].Indexes.IntByTag(1009)
+func (c *PackageFile) Size() uint64 {
+	return uint64(c.Headers[1].Indexes.IntByTag(1009))
+}
+
+func (c *PackageFile) ArchiveSize() uint64 {
+	return uint64(c.Headers[1].Indexes.IntByTag(1046))
 }
 
 func (c *PackageFile) Distribution() string {
@@ -250,7 +297,7 @@ func (c *PackageFile) License() string {
 	return c.Headers[1].Indexes.StringByTag(1014)
 }
 
-func (c *PackageFile) PackageFiler() string {
+func (c *PackageFile) Packager() string {
 	return c.Headers[1].Indexes.StringByTag(1015)
 }
 
