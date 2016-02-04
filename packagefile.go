@@ -78,22 +78,22 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 	// open file
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("Error opening RPM file: %s", err)
+		return nil, err
 	}
 	defer f.Close()
 
 	// read package content
 	p, err := ReadPackageFile(f)
-	if err == nil {
-		// set file path
-		p.path = path
+	if err != nil {
+		return nil, err
 	}
 
-	// set file stats
+	// set file info
+	p.path = path
 	p.fileSize = uint64(fi.Size())
 	p.fileTime = fi.ModTime()
 
-	return p, err
+	return p, nil
 }
 
 // OpenPackageFiles reads all rpm packages with the .rpm suffix from the given
