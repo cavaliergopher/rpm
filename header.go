@@ -64,12 +64,19 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 
 	for x := 0; x < h.IndexCount; x++ {
 		o := 16 * x
-		index := IndexEntry{}
+		index := IndexEntry{
+			Tag:       int(binary.BigEndian.Uint32(indexes[o : o+4])),
+			Type:      int(binary.BigEndian.Uint32(indexes[o+4 : o+8])),
+			Offset:    int(binary.BigEndian.Uint32(indexes[o+8 : o+12])),
+			ItemCount: int(binary.BigEndian.Uint32(indexes[o+12 : o+16])),
+		}
 
-		index.Tag = int(binary.BigEndian.Uint32(indexes[o : o+4]))
-		index.Type = int(binary.BigEndian.Uint32(indexes[o+4 : o+8]))
-		index.Offset = int(binary.BigEndian.Uint32(indexes[o+8 : o+12]))
-		index.ItemCount = int(binary.BigEndian.Uint32(indexes[o+12 : o+16]))
+		// validate index offset
+		if index.Offset >= h.Length {
+			return nil, fmt.Errorf("offset for index %d is out of range", x+1)
+		}
+
+		// append
 		h.Indexes[x] = index
 	}
 
