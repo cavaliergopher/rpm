@@ -21,6 +21,23 @@ type Header struct {
 // Headers is an array of Header structs.
 type Headers []Header
 
+const (
+	// MAX_HEADER_SIZE is the maximum allowable header size in bytes (32 MB).
+	MAX_HEADER_SIZE = 33554432
+)
+
+// Known error types
+var (
+	ErrBadHeaderLength    = fmt.Errorf("RPM header section is incorrect length")
+	ErrNotHeader          = fmt.Errorf("invalid RPM header descriptor")
+	ErrBadIndexCount      = fmt.Errorf("index count exceeds header size")
+	ErrBadIndexLength     = fmt.Errorf("index section is incorrect length")
+	ErrIndexOutOfRange    = fmt.Errorf("index is out of range")
+	ErrBadStoreLength     = fmt.Errorf("header value store is incorrect length")
+	ErrBadIndexType       = fmt.Errorf("unknown index data type")
+	ErrBadIndexValueCount = fmt.Errorf("index value count is out of range")
+)
+
 // ReadPackageHeader reads an RPM package file header structure from the given
 // io.Reader.
 //
@@ -31,23 +48,38 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	header := make([]byte, 16)
 	n, err := r.Read(header)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading package header: %v", err)
+		return nil, err
 	}
 
 	if n != 16 {
-		return nil, fmt.Errorf("Error reading package header: only %d bytes returned", n)
+		return nil, ErrBadHeaderLength
 	}
 
 	// check magic number
 	if 0 != bytes.Compare(header[:3], []byte{0x8E, 0xAD, 0xE8}) {
-		return nil, fmt.Errorf("Bad magic number in package header")
+		return nil, ErrNotHeader
 	}
 
 	// translate header
-	h := &Header{}
-	h.Version = int(header[3])
-	h.IndexCount = int(binary.BigEndian.Uint32(header[8:12]))
-	h.Length = int(binary.BigEndian.Uint32(header[12:16]))
+	h := &Header{
+		Version:    int(header[3]),
+		IndexCount: int(binary.BigEndian.Uint32(header[8:12])),
+		Length:     int(binary.BigEndian.Uint32(header[12:16])),
+	}
+
+	// make sure header size is in range
+	if h.Length > MAX_HEADER_SIZE {
+		return nil, ErrBadHeaderLength
+	}
+
+	// Ensure index count is in range
+	// This test is not entirely precise as h.Length also includes the value
+	// store. It should at least help eliminate excessive buffer allocations for
+	// corrupted length values in the > h.Length ranges.
+	if h.IndexCount*16 > h.Length {
+		return nil, ErrBadIndexCount
+	}
+
 	h.Indexes = make(IndexEntries, h.IndexCount)
 
 	// read indexes
@@ -55,11 +87,11 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	indexes := make([]byte, indexLength)
 	n, err = r.Read(indexes)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading index entries for header: %v", err)
+		return nil, err
 	}
 
 	if n != indexLength {
-		return nil, fmt.Errorf("Error reading index entries for header: only %d bytes returned", n)
+		return nil, ErrBadIndexLength
 	}
 
 	for x := 0; x < h.IndexCount; x++ {
@@ -73,7 +105,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 
 		// validate index offset
 		if index.Offset >= h.Length {
-			return nil, fmt.Errorf("offset for index %d is out of range", x+1)
+			return nil, ErrIndexOutOfRange
 		}
 
 		// append
@@ -84,11 +116,11 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	store := make([]byte, h.Length)
 	n, err = r.Read(store)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading header store: %v", err)
+		return nil, err
 	}
 
 	if n != h.Length {
-		return nil, fmt.Errorf("Error reading header store: only %d bytes returned", n)
+		return nil, ErrBadStoreLength
 	}
 
 	// parse the value of each index from the store
@@ -96,10 +128,18 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		index := h.Indexes[x]
 		o := index.Offset
 
+		if index.ItemCount == 0 {
+			return nil, ErrBadIndexValueCount
+		}
+
 		switch index.Type {
 		case IndexDataTypeChar:
 			vals := make([]uint8, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
+				if o >= len(store) {
+					return nil, fmt.Errorf("uint8 value for index %d is out of range", x+1)
+				}
+
 				vals[v] = uint8(store[o])
 				o += 1
 			}
@@ -109,6 +149,10 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		case IndexDataTypeInt8:
 			vals := make([]int8, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
+				if o >= len(store) {
+					return nil, fmt.Errorf("int8 value for index %d is out of range", x+1)
+				}
+
 				vals[v] = int8(store[o])
 				o += 1
 			}
@@ -118,6 +162,10 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		case IndexDataTypeInt16:
 			vals := make([]int16, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
+				if o+2 > len(store) {
+					return nil, fmt.Errorf("int16 value for index %d is out of range", x+1)
+				}
+
 				vals[v] = int16(binary.BigEndian.Uint16(store[o : o+2]))
 				o += 2
 			}
@@ -127,6 +175,10 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		case IndexDataTypeInt32:
 			vals := make([]int32, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
+				if o+4 > len(store) {
+					return nil, fmt.Errorf("int32 value for index %d is out of range", x+1)
+				}
+
 				vals[v] = int32(binary.BigEndian.Uint32(store[o : o+4]))
 				o += 4
 			}
@@ -136,6 +188,10 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		case IndexDataTypeInt64:
 			vals := make([]int64, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
+				if o+8 > len(store) {
+					return nil, fmt.Errorf("int64 value for index %d is out of range", x+1)
+				}
+
 				vals[v] = int64(binary.BigEndian.Uint64(store[o : o+8]))
 				o += 8
 			}
@@ -143,18 +199,31 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			index.Value = vals
 
 		case IndexDataTypeBinary:
+			if o+index.ItemCount > len(store) {
+				return nil, fmt.Errorf("[]byte value for index %d is out of range", x+1)
+			}
+
 			b := make([]byte, index.ItemCount)
 			copy(b, store[o:o+index.ItemCount])
 
 			index.Value = b
 
 		case IndexDataTypeString, IndexDataTypeStringArray, IndexDataTypeI8NString:
+			// allow atleast one byte per string
+			if o+index.ItemCount > len(store) {
+				return nil, fmt.Errorf("[]string value for index %d is out of range", x+1)
+			}
+
 			vals := make([]string, index.ItemCount)
 
-			for s := 0; s < int(index.ItemCount); s++ {
+			for s := 0; s < index.ItemCount; s++ {
 				// calculate string length
 				var j int
-				for j = 0; store[j+o] != 0; j++ {
+				for j = 0; store[o+j] != 0 && (o+j) < len(store); j++ {
+				}
+
+				if j == len(store) {
+					return nil, fmt.Errorf("string value for index %d is out of range", x+1)
 				}
 
 				vals[s] = string(store[o : o+j])
@@ -162,6 +231,9 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			}
 
 			index.Value = vals
+
+		default:
+			return nil, ErrBadIndexType
 		}
 
 		// save in array

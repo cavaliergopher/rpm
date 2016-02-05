@@ -19,6 +19,12 @@ type Lead struct {
 	SignatureType   int
 }
 
+var (
+	ErrBadLeadLength      = fmt.Errorf("RPM lead section is incorrect length")
+	ErrNotRPMFile         = fmt.Errorf("RPM file descriptor is invalid")
+	ErrUnsupportedVersion = fmt.Errorf("unsupported RPM package version")
+)
+
 // ReadPackageLead reads the deprecated lead section of an RPM file which is
 // used in legacy RPM versions to store package metadata.
 //
@@ -29,17 +35,17 @@ func ReadPackageLead(r io.Reader) (*Lead, error) {
 	b := make([]byte, 96)
 	n, err := r.Read(b)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading RPM Lead section: %s", err)
+		return nil, err
 	}
 
 	// check length
 	if n != 96 {
-		return nil, fmt.Errorf("RPM Lead section is incorrect length")
+		return nil, ErrBadLeadLength
 	}
 
 	// check magic number
 	if 0 != bytes.Compare(b[:4], []byte{0xED, 0xAB, 0xEE, 0xDB}) {
-		return nil, fmt.Errorf("RPM file descriptor is invalid")
+		return nil, ErrNotRPMFile
 	}
 
 	// decode lead
@@ -51,6 +57,11 @@ func ReadPackageLead(r io.Reader) (*Lead, error) {
 		Name:            string(b[10:76]),
 		OperatingSystem: int(binary.BigEndian.Uint16(b[76:78])),
 		SignatureType:   int(binary.BigEndian.Uint16(b[78:80])),
+	}
+
+	// check version
+	if lead.VersionMajor < 3 || lead.VersionMajor > 4 {
+		return nil, ErrUnsupportedVersion
 	}
 
 	// TODO: validate lead value ranges

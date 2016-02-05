@@ -23,7 +23,6 @@ func TestMD5Check(t *testing.T) {
 
 		if err := MD5Check(f); err != nil {
 			t.Errorf("Validation error for %s: %v", f.Name(), err)
-			//os.Remove(path)
 		} else {
 			valid++
 		}
@@ -68,7 +67,6 @@ func TestGPGCheck(t *testing.T) {
 
 		if signer, err := GPGCheck(f, keyring); err != nil {
 			t.Errorf("Validation error for %s: %v", filepath.Base(path), err)
-			//os.Remove(path)
 		} else {
 			t.Logf("%s signed by '%v'", filepath.Base(path), signer)
 			valid++
