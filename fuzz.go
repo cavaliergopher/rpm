@@ -5,7 +5,7 @@ package rpm
 import "bytes"
 
 // Fuzz tests the parsing and error handling of random byte arrays using
-// https://github.com/dvyukov/go-fuzz
+// https://github.com/dvyukov/go-fuzz.
 func Fuzz(data []byte) int {
 	if p, err := ReadPackageFile(bytes.NewReader(data)); err != nil {
 		// handled errors are not very interesting

@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// Header index value data types.
 const (
 	IndexDataTypeNull int = iota
 	IndexDataTypeChar

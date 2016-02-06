@@ -19,6 +19,7 @@ type Lead struct {
 	SignatureType   int
 }
 
+// Predefined lead section errors.
 var (
 	ErrBadLeadLength      = fmt.Errorf("RPM lead section is incorrect length")
 	ErrNotRPMFile         = fmt.Errorf("RPM file descriptor is invalid")

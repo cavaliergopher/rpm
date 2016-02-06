@@ -15,7 +15,7 @@ const (
 	RPMSIGTYPE_HEADERSIG = 5
 )
 
-// Predefined errors
+// Predefined checksum errors.
 var (
 	// ErrMD5ValidationFailed indicates that a RPM package failed checksum
 	// validation.

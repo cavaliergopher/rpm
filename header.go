@@ -21,20 +21,47 @@ type Header struct {
 // Headers is an array of Header structs.
 type Headers []Header
 
+// Predefined sizing constraints.
 const (
 	// MAX_HEADER_SIZE is the maximum allowable header size in bytes (32 MB).
 	MAX_HEADER_SIZE = 33554432
 )
 
-// Known error types
+// Predefined header errors.
 var (
-	ErrBadHeaderLength    = fmt.Errorf("RPM header section is incorrect length")
-	ErrNotHeader          = fmt.Errorf("invalid RPM header descriptor")
-	ErrBadIndexCount      = fmt.Errorf("index count exceeds header size")
-	ErrBadIndexLength     = fmt.Errorf("index section is incorrect length")
-	ErrIndexOutOfRange    = fmt.Errorf("index is out of range")
-	ErrBadStoreLength     = fmt.Errorf("header value store is incorrect length")
-	ErrBadIndexType       = fmt.Errorf("unknown index data type")
+	// ErrBadHeaderLength indicates that the read header section is not the
+	// expected length.
+	ErrBadHeaderLength = fmt.Errorf("RPM header section is incorrect length")
+
+	// ErrNotHeader indicates that the read header section does start with the
+	// expected descriptor.
+	ErrNotHeader = fmt.Errorf("invalid RPM header descriptor")
+
+	// ErrBadStoreLength indicates that the read header store section is not the
+	// expected length.
+	ErrBadStoreLength = fmt.Errorf("header value store is incorrect length")
+)
+
+// Predefined header index errors.
+var (
+	// ErrBadIndexCount indicates that number of indexes given in the read
+	// header would exceed the actual size of the header.
+	ErrBadIndexCount = fmt.Errorf("index count exceeds header size")
+
+	// ErrBadIndexLength indicates that the read header index section is not the
+	// expected length.
+	ErrBadIndexLength = fmt.Errorf("index section is incorrect length")
+
+	// ErrIndexOutOfRange indicates that the read header index would exceed the
+	// range of the header.
+	ErrIndexOutOfRange = fmt.Errorf("index is out of range")
+
+	// ErrBadIndexType indicates that the read index contains a value of an
+	// unsupported data type.
+	ErrBadIndexType = fmt.Errorf("unknown index data type")
+
+	// ErrBadIndexValueCount indicates that the read index value would exceed
+	// the range of the header store section.
 	ErrBadIndexValueCount = fmt.Errorf("index value count is out of range")
 )
 
