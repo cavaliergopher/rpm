@@ -232,7 +232,11 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 
 			index.Value = vals
 
+		case IndexDataTypeNull:
+			// nothing to do here
+
 		default:
+			// unknown data type
 			return nil, ErrBadIndexType
 		}
 

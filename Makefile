@@ -4,7 +4,7 @@ build:
 	go build -x
 
 test:
-	go test -v && cd yum && go test -v
+	go test -v -cover && cd yum && go test -v -cover
 
 get-deps:
 	go get github.com/mattn/go-sqlite3
