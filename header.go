@@ -219,7 +219,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			for s := 0; s < index.ItemCount; s++ {
 				// calculate string length
 				var j int
-				for j = 0; store[o+j] != 0 && (o+j) < len(store); j++ {
+				for j = 0; (o+j) < len(store) && store[o+j] != 0; j++ {
 				}
 
 				if j == len(store) {
