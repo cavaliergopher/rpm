@@ -10,6 +10,17 @@ type VerTest struct {
 	R int
 }
 
+type TestPkg struct {
+	e int
+	v string
+	r string
+}
+
+func (c *TestPkg) Name() string    { return "test" }
+func (c *TestPkg) Epoch() int      { return c.e }
+func (c *TestPkg) Version() string { return c.v }
+func (c *TestPkg) Release() string { return c.r }
+
 func sign(r int) string {
 	if r < 0 {
 		return "<"
@@ -3748,12 +3759,37 @@ func TestRpmVerCmp(t *testing.T) {
 
 	errCount := 0
 	for _, test := range tests {
-		if r := rpmvercmp(test.A, test.B); r != test.R {
+		// compare 'version'
+		a := &TestPkg{0, test.A, ""}
+		b := &TestPkg{0, test.B, ""}
+		if r := VersionCompare(a, b); r != test.R {
+			errCount++
+			t.Errorf("Expected %s %s %s; got %s %s %s", test.A, sign(test.R), test.B, test.A, sign(r), test.B)
+		}
+
+		// compare 'release'
+		a = &TestPkg{0, "", test.A}
+		b = &TestPkg{0, "", test.B}
+		if r := VersionCompare(a, b); r != test.R {
 			errCount++
 			t.Errorf("Expected %s %s %s; got %s %s %s", test.A, sign(test.R), test.B, test.A, sign(r), test.B)
 		}
 	}
 
+	// compare nil
+	if r := VersionCompare(nil, nil); r != 0 {
+		t.Errorf("Expected <nil> == <nil>; got <nil> %s <nil>", sign(r))
+	}
+
+	if r := VersionCompare(nil, &TestPkg{1, "", ""}); r != -1 {
+		t.Errorf("Expected <nil> < <nil>; got <nil> %s <nil>", sign(r))
+	}
+
+	if r := VersionCompare(&TestPkg{1, "", ""}, nil); r != 1 {
+		t.Errorf("Expected <nil> > <nil>; got <nil> %s <nil>", sign(r))
+	}
+
+	// log stats
 	if errCount > 0 {
 		t.Errorf("%d/%d version compare errors", errCount, len(tests))
 	} else {

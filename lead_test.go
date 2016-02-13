@@ -35,13 +35,6 @@ func TestLeadErrors(t *testing.T) {
 		}
 		f.Close()
 
-		// simulate magic number error
-		r = bytes.NewReader(make([]byte, 96))
-		_, err = ReadPackageLead(r)
-		if err != ErrNotRPMFile {
-			t.Errorf("Expected bad descriptor error in lead section, got: %v", err)
-		}
-
 		// simulate version error
 		f, _ = os.Open(path)
 		b, _ := ioutil.ReadAll(f)
@@ -58,5 +51,20 @@ func TestLeadErrors(t *testing.T) {
 		if err != ErrUnsupportedVersion {
 			t.Errorf("Expected version error in lead section, got: %v", err)
 		}
+	}
+
+	// simulate magic number error
+	b := make([]byte, 96)
+	r := bytes.NewReader(b)
+	_, err = ReadPackageLead(r)
+	if err != ErrNotRPMFile {
+		t.Errorf("Expected bad descriptor error in lead section, got: %v", err)
+	}
+
+	// test handler in ReadPackageFile
+	r = bytes.NewReader(b)
+	_, err = ReadPackageFile(r)
+	if err != ErrNotRPMFile {
+		t.Errorf("Expected lead section error in bad package, got: %v", err)
 	}
 }
