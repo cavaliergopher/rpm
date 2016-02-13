@@ -19,19 +19,29 @@ func TestDependencies(t *testing.T) {
 		}
 
 		// all should have Requires
-		if reqs := p.Requires(); len(reqs) == 0 {
+		if reqs := p.Requires(); len(reqs) > 0 {
+			printDeps(t, p, "requires", reqs)
+		} else {
 			t.Errorf("No Require dependencies found for package %v", p)
 		}
 
 		// all should have Provides
-		if provs := p.Provides(); len(provs) == 0 {
+		if provs := p.Provides(); len(provs) > 0 {
+			printDeps(t, p, "provides", provs)
+		} else {
 			t.Errorf("No Provides dependencies found for package %v", p)
 		}
 
 		// some will have Conflicts
-		p.Conflicts()
+		printDeps(t, p, "conflicts with", p.Conflicts())
 
 		// some will have Obsoletes
-		p.Obsoletes()
+		printDeps(t, p, "obsoletes", p.Obsoletes())
+	}
+}
+
+func printDeps(t *testing.T, p *PackageFile, typ string, deps Dependencies) {
+	for _, dep := range deps {
+		t.Logf("%v %s %s", p, typ, dep)
 	}
 }
