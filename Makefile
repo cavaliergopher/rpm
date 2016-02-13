@@ -7,10 +7,11 @@ test:
 	go test -v -cover && cd yum && go test -v -cover
 
 get-deps:
-	go get github.com/mattn/go-sqlite3
-	go get golang.org/x/crypto/openpgp
+	go get github.com/cavaliercoder/badio
 	go get github.com/dvyukov/go-fuzz/go-fuzz
 	go get github.com/dvyukov/go-fuzz/go-fuzz-build
+	go get github.com/mattn/go-sqlite3
+	go get golang.org/x/crypto/openpgp
 
 rpm-fuzz.zip: *.go
 	go-fuzz-build github.com/cavaliercoder/go-rpm

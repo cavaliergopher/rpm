@@ -21,8 +21,16 @@ type Lead struct {
 
 // Predefined lead section errors.
 var (
-	ErrBadLeadLength      = fmt.Errorf("RPM lead section is incorrect length")
-	ErrNotRPMFile         = fmt.Errorf("RPM file descriptor is invalid")
+	// ErrBadLeadLength indicates that the read lead section is not the expected
+	// length.
+	ErrBadLeadLength = fmt.Errorf("RPM lead section is incorrect length")
+
+	// ErrNotRPMFile indicates that the read file does not start with the
+	// expected descriptor.
+	ErrNotRPMFile = fmt.Errorf("RPM file descriptor is invalid")
+
+	// ErrUnsupportedVersion indicates that the read lead section version is not
+	// currently supported.
 	ErrUnsupportedVersion = fmt.Errorf("unsupported RPM package version")
 )
 
