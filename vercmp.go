@@ -49,6 +49,19 @@ func VersionCompare(a PackageVersion, b PackageVersion) int {
 	return rpmvercmp(a.Release(), b.Release())
 }
 
+// LatestPackage returns the package with the highest version in the given slice
+// of PackageVersions.
+func LatestPackage(v ...PackageVersion) PackageVersion {
+	var latest PackageVersion
+	for _, p := range v {
+		if 1 == VersionCompare(p, latest) {
+			latest = p
+		}
+	}
+
+	return latest
+}
+
 // rpmcmpver compares two version or release strings.
 //
 // For the original C implementation, see:
