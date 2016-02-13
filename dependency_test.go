@@ -1,47 +1,38 @@
 package rpm
 
 import (
+	"fmt"
 	"testing"
 )
 
-func TestDependencies(t *testing.T) {
-	// load package file paths
-	files, err := packages(t)
-	if err != nil {
-		t.Fatalf("Error listing rpm packages: %v", err)
-	}
-
-	// load each package
-	for _, path := range files {
-		p, err := OpenPackageFile(path)
-		if err != nil {
-			t.Errorf("%v", err)
-		}
-
-		// all should have Requires
-		if reqs := p.Requires(); len(reqs) > 0 {
-			printDeps(t, p, "requires", reqs)
-		} else {
-			t.Errorf("No Require dependencies found for package %v", p)
-		}
-
-		// all should have Provides
-		if provs := p.Provides(); len(provs) > 0 {
-			printDeps(t, p, "provides", provs)
-		} else {
-			t.Errorf("No Provides dependencies found for package %v", p)
-		}
-
-		// some will have Conflicts
-		printDeps(t, p, "conflicts with", p.Conflicts())
-
-		// some will have Obsoletes
-		printDeps(t, p, "obsoletes", p.Obsoletes())
-	}
+type DepTest struct {
+	dep Dependency
+	str string
 }
 
-func printDeps(t *testing.T, p *PackageFile, typ string, deps Dependencies) {
-	for _, dep := range deps {
-		t.Logf("%v %s %s", p, typ, dep)
+func TestDependencies(t *testing.T) {
+	tests := []DepTest{
+		DepTest{NewDependency(DepFlagAny, "test", 0, "", ""), "test"},
+		DepTest{NewDependency(DepFlagAny, "test", 0, "1", ""), "test 1"},
+		DepTest{NewDependency(DepFlagAny, "test", 0, "1", "2"), "test 1.2"},
+		DepTest{NewDependency(DepFlagAny, "test", 1, "2", "3"), "test 2.3"},
+		DepTest{NewDependency(DepFlagLesser, "test", 0, "1", ""), "test < 1"},
+		DepTest{NewDependency(DepFlagLesser, "test", 0, "1", "2"), "test < 1.2"},
+		DepTest{NewDependency(DepFlagLesser, "test", 1, "2", "3"), "test < 2.3"},
+		DepTest{NewDependency(DepFlagLesserOrEqual, "test", 0, "1", ""), "test <= 1"},
+		DepTest{NewDependency(DepFlagLesserOrEqual, "test", 0, "1", "2"), "test <= 1.2"},
+		DepTest{NewDependency(DepFlagLesserOrEqual, "test", 1, "2", "3"), "test <= 2.3"},
+		DepTest{NewDependency(DepFlagGreaterOrEqual, "test", 0, "1", ""), "test >= 1"},
+		DepTest{NewDependency(DepFlagGreaterOrEqual, "test", 0, "1", "2"), "test >= 1.2"},
+		DepTest{NewDependency(DepFlagGreaterOrEqual, "test", 1, "2", "3"), "test >= 2.3"},
+		DepTest{NewDependency(DepFlagLesser, "test", 0, "1", ""), "test < 1"},
+		DepTest{NewDependency(DepFlagLesser, "test", 0, "1", "2"), "test < 1.2"},
+		DepTest{NewDependency(DepFlagLesser, "test", 1, "2", "3"), "test < 2.3"},
+	}
+
+	for i, test := range tests {
+		if str := fmt.Sprintf("%v", test.dep); str != test.str {
+			t.Errorf("Expected '%s' for test %d, got: '%s'", test.str, i+1, str)
+		}
 	}
 }

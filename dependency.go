@@ -62,8 +62,14 @@ func (c *dependency) String() string {
 	case DepFlagLesserOrEqual == (c.flags & DepFlagLesserOrEqual):
 		s = fmt.Sprintf("%s <=", s)
 
+	case DepFlagLesser == (c.flags & DepFlagLesser):
+		s = fmt.Sprintf("%s <", s)
+
 	case DepFlagGreaterOrEqual == (c.flags & DepFlagGreaterOrEqual):
 		s = fmt.Sprintf("%s >=", s)
+
+	case DepFlagGreater == (c.flags & DepFlagGreater):
+		s = fmt.Sprintf("%s >", s)
 
 	case DepFlagEqual == (c.flags & DepFlagEqual):
 		s = fmt.Sprintf("%s =", s)
