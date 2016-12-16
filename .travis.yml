@@ -1,8 +1,8 @@
 language: go
 
 go:
-    - 1.5.1
+    - 1.7.3
 
 install: make get-deps
 
-script: make test
+script: make check
