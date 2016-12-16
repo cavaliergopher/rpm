@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 #
-# Generate test cases for vercmp_test.go
+# Generate test cases for version_test.go
 #
 # Herein lies my first ever python script...
 #
@@ -71,7 +71,7 @@ versions = [
   "22.svn458.el7",
 ]
 
-print "\t// tests generated with vercmp_test.py"
+print "\t// tests generated with version_test.py"
 print "\ttests := []VerTest{"
 
 for x in versions:

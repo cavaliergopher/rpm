@@ -1,16 +1,30 @@
+PACKAGE = github.com/cavaliercoder/go-rpm
+
+rpm_la_SOURCES = \
+	dependency.go \
+	doc.go \
+	dump.go \
+	gpgcheck.go \
+	header.go \
+	index.go \
+	keyring.go \
+	lead.go \
+	packagefile.go \
+	tags.go \
+	version.go
+
 all: build
 
-build:
-	go build -x
+build: $(rpm_la_SOURCES)
+	go build -x $(PACKAGE)
 
 test:
-	go test -v -cover && cd yum && go test -v -cover
+	go test -v -cover
 
 get-deps:
 	go get github.com/cavaliercoder/badio
 	go get github.com/dvyukov/go-fuzz/go-fuzz
 	go get github.com/dvyukov/go-fuzz/go-fuzz-build
-	go get github.com/mattn/go-sqlite3
 	go get golang.org/x/crypto/openpgp
 
 rpm-fuzz.zip: *.go

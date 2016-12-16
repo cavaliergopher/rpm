@@ -11,6 +11,15 @@ import (
 // characters or alphanumeric characters.
 var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)")
 
+// PackageVersion is an interface which holds version information for a single
+// package version.
+type PackageVersion interface {
+	Name() string
+	Version() string
+	Release() string
+	Epoch() int
+}
+
 // VersionCompare compares the version details of two packages. Versions are
 // compared by Epoch, Version and Release in descending order of precedence.
 //

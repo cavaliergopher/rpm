@@ -3,3 +3,8 @@ rpms
 *.sqlite
 *.bz2
 *.gz
+*.zip
+*.yml
+*.yaml
+.fuzz/
+

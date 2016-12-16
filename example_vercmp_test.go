@@ -17,7 +17,7 @@ func ExampleVersionCompare() {
 	}
 
 	// test each package file
-	var latest rpm.Package = nil
+	var latest rpm.PackageVersion = nil
 	for _, f := range dir {
 		if strings.HasSuffix(f.Name(), ".rpm") {
 			// read package file
