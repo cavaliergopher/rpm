@@ -1,34 +1,18 @@
 PACKAGE = github.com/cavaliercoder/go-rpm
 
-rpm_la_SOURCES = \
-	dependency.go \
-	doc.go \
-	dump.go \
-	gpgcheck.go \
-	header.go \
-	index.go \
-	keyring.go \
-	lead.go \
-	packagefile.go \
-	tags.go \
-	version.go
+all: check install
 
-all: build
+check:
+	go test -v -cover $(PACKAGE)/...
 
-build: $(rpm_la_SOURCES)
-	go build -x $(PACKAGE)
+install:
+	go install -x $(PACKAGE)/...
 
-test:
-	go test -v -cover
-
-get-deps:
-	go get github.com/cavaliercoder/badio
-	go get github.com/dvyukov/go-fuzz/go-fuzz
-	go get github.com/dvyukov/go-fuzz/go-fuzz-build
-	go get golang.org/x/crypto/openpgp
+clean: clean-fuzz
+	go clean -x -i $(PACKAGE)/...
 
 rpm-fuzz.zip: *.go
-	go-fuzz-build github.com/cavaliercoder/go-rpm
+	go-fuzz-build $(PACKAGE)
 
 fuzz: rpm-fuzz.zip
 	go-fuzz -bin=./rpm-fuzz.zip -workdir=.fuzz/
@@ -36,6 +20,10 @@ fuzz: rpm-fuzz.zip
 clean-fuzz:
 	rm -rf rpm-fuzz.zip .fuzz/crashers/* .fuzz/suppressions/*
 
-clean: clean-fuzz
+get-deps:
+	go get github.com/cavaliercoder/badio
+	go get github.com/dvyukov/go-fuzz/go-fuzz
+	go get github.com/dvyukov/go-fuzz/go-fuzz-build
+	go get golang.org/x/crypto/openpgp
 
-.PHONY: all build test get-deps fuzz clean-fuzz clean
+.PHONY: all check install clean fuzz clean-fuzz get-deps

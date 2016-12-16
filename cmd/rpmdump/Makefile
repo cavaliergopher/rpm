@@ -6,7 +6,10 @@ all: rpmdump
 rpmdump: $(rpmdump_SOURCES)
 	go build -x -o rpmdump $(rpmdump_SOURCES)
 
-clean:
-	go clean -x
+install:
+	go install -x github.com/cavaliercoder/go-rpm/cmd/rpmdump
 
-.PHONY: all clean
+clean:
+	go clean -x -i
+
+.PHONY: all install clean
