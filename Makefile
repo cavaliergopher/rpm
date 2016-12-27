@@ -11,6 +11,10 @@ install:
 clean: clean-fuzz
 	go clean -x -i $(PACKAGE)/...
 
+get-deps:
+	go get github.com/cavaliercoder/badio
+	go get golang.org/x/crypto/openpgp
+
 rpm-fuzz.zip: *.go
 	go-fuzz-build $(PACKAGE)
 
@@ -20,10 +24,8 @@ fuzz: rpm-fuzz.zip
 clean-fuzz:
 	rm -rf rpm-fuzz.zip .fuzz/crashers/* .fuzz/suppressions/*
 
-get-deps:
-	go get github.com/cavaliercoder/badio
-	go get github.com/dvyukov/go-fuzz/go-fuzz
+get-fuzz-deps:
 	go get github.com/dvyukov/go-fuzz/go-fuzz-build
-	go get golang.org/x/crypto/openpgp
+	go get github.com/dvyukov/go-fuzz/go-fuzz
 
-.PHONY: all check install clean fuzz clean-fuzz get-deps
+.PHONY: all check install clean get-deps fuzz clean-fuzz get-fuzz-deps
