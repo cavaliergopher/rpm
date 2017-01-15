@@ -249,6 +249,19 @@ func (c *PackageFile) Files() []string {
 	return files
 }
 
+// Modes returns the file mode of each file in the package. The order of the
+// returned modes matches the order returned by Files().
+func (c *PackageFile) Modes() []os.FileMode {
+	modes := c.Headers[1].Indexes.IntsByTag(RPMTAG_FILEMODES)
+
+	fileModes := make([]os.FileMode, len(modes))
+	for i := 0; i < len(modes); i++ {
+		fileModes[i] = os.FileMode(modes[i])
+	}
+
+	return fileModes
+}
+
 func (c *PackageFile) Summary() string {
 	return strings.Join(c.Headers[1].Indexes.StringsByTag(1004), "\n")
 }

@@ -92,3 +92,44 @@ func TestChecksum(t *testing.T) {
 		}
 	}
 }
+
+func TestFileModes(t *testing.T) {
+	expectedModes := map[string]os.FileMode{
+		"/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7":           0644,
+		"/etc/yum.repos.d/epel-testing.repo":            0644,
+		"/etc/yum.repos.d/epel.repo":                    0644,
+		"/usr/lib/rpm/macros.d/macros.epel":             0644,
+		"/usr/lib/systemd/system-preset/90-epel.preset": 0644,
+		"/usr/share/doc/epel-release-7":                 0755,
+		"/usr/share/doc/epel-release-7/GPL":             0644,
+	}
+
+	path := "./testdata/epel-release-7-5.noarch.rpm"
+
+	p, err := OpenPackageFile(path)
+	if err != nil {
+		t.Fatalf("Error opening %s: %v", path, err)
+	}
+
+	names := p.Files()
+	modes := p.Modes()
+
+	if len(names) != len(modes) {
+		t.Fatal("Mismatched slice lenghts for Files (len=%v) and Modes (len=%v)", len(names), len(modes))
+	}
+
+	for i, name := range names {
+		mode := modes[i].Perm()
+
+		m, found := expectedModes[name]
+		if !found {
+			t.Errorf("unexpected file found in RPM: %v", name)
+			continue
+		}
+
+		if m != mode {
+			t.Errorf("expected %v but got %v for %v", m, mode, name)
+			continue
+		}
+	}
+}
