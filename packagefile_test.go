@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func packages(t *testing.T) ([]string, error) {
@@ -93,15 +94,28 @@ func TestChecksum(t *testing.T) {
 	}
 }
 
-func TestFileModes(t *testing.T) {
-	expectedModes := map[string]os.FileMode{
-		"/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7":           0644,
-		"/etc/yum.repos.d/epel-testing.repo":            0644,
-		"/etc/yum.repos.d/epel.repo":                    0644,
-		"/usr/lib/rpm/macros.d/macros.epel":             0644,
-		"/usr/lib/systemd/system-preset/90-epel.preset": 0644,
-		"/usr/share/doc/epel-release-7":                 0755,
-		"/usr/share/doc/epel-release-7/GPL":             0644,
+func TestPackageFiles(t *testing.T) {
+	names := []string{
+		"/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7",
+		"/etc/yum.repos.d/epel-testing.repo",
+		"/etc/yum.repos.d/epel.repo",
+		"/usr/lib/rpm/macros.d/macros.epel",
+		"/usr/lib/systemd/system-preset/90-epel.preset",
+		"/usr/share/doc/epel-release-7",
+		"/usr/share/doc/epel-release-7/GPL",
+	}
+	modes := []int64{0644, 0644, 0644, 0644, 0644, 0755, 0644}
+	sizes := []int64{1662, 1056, 957, 41, 2813, 4096, 18385}
+	owners := []string{"root", "root", "root", "root", "root", "root", "root"}
+	groups := []string{"root", "root", "root", "root", "root", "root", "root"}
+	modtimes := []time.Time{
+		time.Unix(1416932629, 0),
+		time.Unix(1416932629, 0),
+		time.Unix(1416932629, 0),
+		time.Unix(1416932629, 0),
+		time.Unix(1416932629, 0),
+		time.Unix(1416932778, 0),
+		time.Unix(1416932629, 0),
 	}
 
 	path := "./testdata/epel-release-7-5.noarch.rpm"
@@ -111,25 +125,36 @@ func TestFileModes(t *testing.T) {
 		t.Fatalf("Error opening %s: %v", path, err)
 	}
 
-	names := p.Files()
-	modes := p.Modes()
-
-	if len(names) != len(modes) {
-		t.Fatal("Mismatched slice lenghts for Files (len=%v) and Modes (len=%v)", len(names), len(modes))
+	files := p.Files()
+	if len(files) != len(names) {
+		t.Fatalf("expected %v files in RPM package but got %v", len(names), len(files))
 	}
 
-	for i, name := range names {
-		mode := modes[i].Perm()
-
-		m, found := expectedModes[name]
-		if !found {
-			t.Errorf("unexpected file found in RPM: %v", name)
+	for i, fi := range files {
+		name := fi.Name()
+		if name != names[i] {
+			t.Errorf("expected file %v with name %v but got %v", i, names[i], name)
 			continue
 		}
 
-		if m != mode {
-			t.Errorf("expected %v but got %v for %v", m, mode, name)
-			continue
+		if mode := int64(fi.Mode().Perm()); mode != modes[i] {
+			t.Errorf("expected mode %v but got %v for %v", modes[i], mode, name)
+		}
+
+		if size := fi.Size(); size != sizes[i] {
+			t.Errorf("expected size %v but got %v for %v", sizes[i], size, name)
+		}
+
+		if owner := fi.Owner(); owner != owners[i] {
+			t.Errorf("expected owner %v but got %v for %v", owners[i], owner, name)
+		}
+
+		if group := fi.Group(); group != groups[i] {
+			t.Errorf("expected group %v but got %v for %v", groups[i], group, name)
+		}
+
+		if modtime := fi.ModTime(); modtime != modtimes[i] {
+			t.Errorf("expected modtime %v but got %v for %v", modtimes[i], modtime.Unix(), name)
 		}
 	}
 }

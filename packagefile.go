@@ -236,30 +236,31 @@ func (c *PackageFile) Obsoletes() Dependencies {
 	return c.dependencies(5043, 1114, 1090, 1115)
 }
 
-func (c *PackageFile) Files() []string {
+// Files returns file information for each file that is installed by this RPM
+// package.
+func (c *PackageFile) Files() []FileInfo {
 	ixs := c.Headers[1].Indexes.IntsByTag(1116)
 	names := c.Headers[1].Indexes.StringsByTag(1117)
 	dirs := c.Headers[1].Indexes.StringsByTag(1118)
+	modes := c.Headers[1].Indexes.IntsByTag(1030)
+	sizes := c.Headers[1].Indexes.IntsByTag(1028)
+	times := c.Headers[1].Indexes.IntsByTag(1034)
+	owners := c.Headers[1].Indexes.StringsByTag(1039)
+	groups := c.Headers[1].Indexes.StringsByTag(1040)
 
-	files := make([]string, len(names))
+	files := make([]FileInfo, len(names))
 	for i := 0; i < len(names); i++ {
-		files[i] = dirs[ixs[i]] + names[i]
+		files[i] = FileInfo{
+			name:    dirs[ixs[i]] + names[i],
+			mode:    os.FileMode(modes[i]),
+			size:    sizes[i],
+			modTime: time.Unix(times[i], 0),
+			owner:   owners[i],
+			group:   groups[i],
+		}
 	}
 
 	return files
-}
-
-// Modes returns the file mode of each file in the package. The order of the
-// returned modes matches the order returned by Files().
-func (c *PackageFile) Modes() []os.FileMode {
-	modes := c.Headers[1].Indexes.IntsByTag(RPMTAG_FILEMODES)
-
-	fileModes := make([]os.FileMode, len(modes))
-	for i := 0; i < len(modes); i++ {
-		fileModes[i] = os.FileMode(modes[i])
-	}
-
-	return fileModes
 }
 
 func (c *PackageFile) Summary() string {
