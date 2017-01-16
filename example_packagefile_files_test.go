@@ -5,8 +5,8 @@ import (
 	"github.com/cavaliercoder/go-rpm"
 )
 
-// ExampleFileList lists all the files in a RPM package.
-func ExampleFileList() {
+// ExamplePackageFile_Files lists all the files in a RPM package.
+func ExamplePackageFile_Files() {
 	// open a package file
 	pkg, err := rpm.OpenPackageFile("./testdata/epel-release-7-5.noarch.rpm")
 	if err != nil {
