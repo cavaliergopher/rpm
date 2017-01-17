@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 )
 
@@ -141,13 +140,11 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	}
 
 	// read the "store"
-	store, err := ioutil.ReadAll(r)
-
+	store := make([]byte, h.Length)
+	n, err = io.ReadFull(r, store)
 	if err != nil {
 		return nil, err
 	}
-
-	n = len(store)
 
 	if n != h.Length {
 		return nil, ErrBadStoreLength
@@ -263,7 +260,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			index.Value = vals
 
 		case IndexDataTypeNull:
-			// nothing to do here
+		// nothing to do here
 
 		default:
 			// unknown data type
