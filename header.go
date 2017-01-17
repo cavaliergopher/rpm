@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 )
 
@@ -140,11 +141,13 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	}
 
 	// read the "store"
-	store := make([]byte, h.Length)
-	n, err = r.Read(store)
+	store, err := ioutil.ReadAll(r)
+
 	if err != nil {
 		return nil, err
 	}
+
+	n = len(store)
 
 	if n != h.Length {
 		return nil, ErrBadStoreLength
