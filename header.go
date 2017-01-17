@@ -141,7 +141,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 
 	// read the "store"
 	store := make([]byte, h.Length)
-	n, err = r.Read(store)
+	n, err = io.ReadFull(r, store)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			index.Value = vals
 
 		case IndexDataTypeNull:
-			// nothing to do here
+		// nothing to do here
 
 		default:
 			// unknown data type
