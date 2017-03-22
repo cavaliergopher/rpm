@@ -10,7 +10,7 @@ import (
 
 func TestMD5Check(t *testing.T) {
 	// load package file paths
-	files, err := packages(t)
+	files, err := packages()
 	if err != nil {
 		t.Fatalf("Error listing rpm packages: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestGPGCheck(t *testing.T) {
 	}
 
 	// load package file paths
-	files, err := packages(t)
+	files, err := packages()
 	if err != nil {
 		t.Fatalf("Error listing rpm packages: %v", err)
 	}

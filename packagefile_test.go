@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func packages(t *testing.T) ([]string, error) {
+func packages() ([]string, error) {
 	// get a directory full of rpms from RPM_DIR environment variable or
 	// failback to ./testdata
 	path := os.Getenv("RPM_DIR")
@@ -19,7 +19,6 @@ func packages(t *testing.T) ([]string, error) {
 	}
 
 	// list RPM files
-	t.Logf("Loading package files in %s...", path)
 	dir, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -41,7 +40,7 @@ func packages(t *testing.T) ([]string, error) {
 
 func TestReadRPMFile(t *testing.T) {
 	// load package file paths
-	files, err := packages(t)
+	files, err := packages()
 	if err != nil {
 		t.Fatalf("Error listing rpm packages: %v", err)
 	}
@@ -156,5 +155,22 @@ func TestPackageFiles(t *testing.T) {
 		if modtime := fi.ModTime(); modtime != modtimes[i] {
 			t.Errorf("expected modtime %v but got %v for %v", modtimes[i], modtime.Unix(), name)
 		}
+	}
+}
+
+func BenchmarkPackageOpens(b *testing.B) {
+	path := os.Getenv("RPM_DIR")
+	if path == "" {
+		path = "testdata"
+	}
+
+	// open and read the package list b.N times
+	for n := 0; n < b.N; n++ {
+		pkgs, err := OpenPackageFiles(path)
+		if err != nil {
+			panic(err)
+		}
+
+		X = pkgs
 	}
 }
