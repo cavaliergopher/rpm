@@ -19,6 +19,9 @@ type FileInfo struct {
 	group   string
 }
 
+// compile-time check that rpm.FileInfo implements os.FileInfo interface
+var _ os.FileInfo = new(FileInfo)
+
 func (f *FileInfo) String() string {
 	return f.Name()
 }
