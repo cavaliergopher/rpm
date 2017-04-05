@@ -1,28 +1,20 @@
 package rpm
 
 import (
+	"bytes"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestMD5Check(t *testing.T) {
-	// load package file paths
-	files, err := packages()
-	if err != nil {
-		t.Fatalf("Error listing rpm packages: %v", err)
-	}
+	files := getTestFiles()
 
 	valid := 0
-	for _, path := range files {
-		// MD5 Check
-		f, _ := os.Open(path)
-		defer f.Close()
-
-		if err := MD5Check(f); err != nil {
-			t.Errorf("Validation error for %s: %v", f.Name(), err)
+	for filename, b := range files {
+		if err := MD5Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
 		} else {
 			valid++
 		}
@@ -53,22 +45,15 @@ func TestGPGCheck(t *testing.T) {
 	}
 
 	// load package file paths
-	files, err := packages()
-	if err != nil {
-		t.Fatalf("Error listing rpm packages: %v", err)
-	}
+	files := getTestFiles()
 
 	// check each package
 	valid := 0
-	for _, path := range files {
-		// GPG Check
-		f, _ := os.Open(path)
-		defer f.Close()
-
-		if signer, err := GPGCheck(f, keyring); err != nil {
-			t.Errorf("Validation error for %s: %v", filepath.Base(path), err)
+	for filename, b := range files {
+		if signer, err := GPGCheck(bytes.NewReader(b), keyring); err != nil {
+			t.Errorf("Validation error for %s: %v", filepath.Base(filename), err)
 		} else {
-			t.Logf("%s signed by '%v'", filepath.Base(path), signer)
+			t.Logf("%s signed by '%v'", filepath.Base(filename), signer)
 			valid++
 		}
 	}

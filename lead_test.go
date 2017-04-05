@@ -2,45 +2,42 @@ package rpm
 
 import (
 	"bytes"
-	"github.com/cavaliercoder/badio"
-	"io/ioutil"
-	"os"
+	"io"
 	"testing"
+
+	"github.com/cavaliercoder/badio"
 )
 
 func TestLeadErrors(t *testing.T) {
 	// load package file paths
-	files, err := packages()
-	if err != nil {
-		t.Fatalf("Error listing rpm packages: %v", err)
-	}
+	files := getTestFiles()
 
 	// load each package
-	for _, path := range files {
+	for _, fb := range files {
+		// local copy the file so the following corruptions don't break
+		// other tests
+		b := make([]byte, len(fb))
+		copy(b, fb)
+
 		// simulate read error
-		f, _ := os.Open(path)
+		f := bytes.NewReader(b)
 		r := badio.NewBreakReader(f, 95)
 		_, err := ReadPackageLead(r)
 		if err == nil {
 			t.Errorf("Expected read error in lead section, got: %v", err)
 		}
-		f.Close()
 
 		// simulate length error
-		f, _ = os.Open(path)
+		f.Seek(0, io.SeekStart)
 		r = badio.NewTruncateReader(f, 95)
 		_, err = ReadPackageLead(r)
 		if err != ErrBadLeadLength {
 			t.Errorf("Expected bad length error in lead section, got: %v", err)
 		}
-		f.Close()
 
 		// simulate version error
-		f, _ = os.Open(path)
-		b, _ := ioutil.ReadAll(f)
-		f.Close()
-
-		b[4] = 0x02
+		f.Seek(0, io.SeekStart)
+		b[4] = 0x02 // TODO: this is not thread safe and coul
 		_, err = ReadPackageLead(bytes.NewReader(b))
 		if err != ErrUnsupportedVersion {
 			t.Errorf("Expected version error in lead section, got: %v", err)
@@ -56,7 +53,7 @@ func TestLeadErrors(t *testing.T) {
 	// simulate magic number error
 	b := make([]byte, 96)
 	r := bytes.NewReader(b)
-	_, err = ReadPackageLead(r)
+	_, err := ReadPackageLead(r)
 	if err != ErrNotRPMFile {
 		t.Errorf("Expected bad descriptor error in lead section, got: %v", err)
 	}
