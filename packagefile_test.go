@@ -1,7 +1,7 @@
 package rpm
 
 import (
-	"fmt"
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,7 +10,13 @@ import (
 	"time"
 )
 
-func packages() ([]string, error) {
+var testFiles map[string][]byte
+
+func getTestFiles() map[string][]byte {
+	if testFiles != nil {
+		return testFiles
+	}
+
 	// get a directory full of rpms from RPM_DIR environment variable or
 	// failback to ./testdata
 	path := os.Getenv("RPM_DIR")
@@ -21,7 +27,7 @@ func packages() ([]string, error) {
 	// list RPM files
 	dir, err := ioutil.ReadDir(path)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	files := make([]string, 0)
@@ -32,26 +38,32 @@ func packages() ([]string, error) {
 	}
 
 	if len(files) == 0 {
-		return nil, fmt.Errorf("No rpm packages found for testing")
+		panic("No rpm packages found for testing")
 	}
 
-	return files, nil
+	testFiles = make(map[string][]byte, len(files))
+	for _, filename := range files {
+		b, err := ioutil.ReadFile(filename)
+		if err != nil {
+			panic(err)
+		}
+
+		testFiles[filename] = b
+	}
+
+	return testFiles
 }
 
 func TestReadRPMFile(t *testing.T) {
 	// load package file paths
-	files, err := packages()
-	if err != nil {
-		t.Fatalf("Error listing rpm packages: %v", err)
-	}
+	files := getTestFiles()
 
 	valid := 0
-	for _, path := range files {
+	for path, b := range files {
 		// Load package info
-		rpm, err := OpenPackageFile(path)
+		rpm, err := ReadPackageFile(bytes.NewReader(b))
 		if err != nil {
 			t.Errorf("Error loading RPM file %s: %s", path, err)
-			//os.Remove(path)
 		} else {
 			t.Logf("Loaded package: %v", rpm)
 			valid++
@@ -159,18 +171,19 @@ func TestPackageFiles(t *testing.T) {
 }
 
 func BenchmarkPackageOpens(b *testing.B) {
-	path := os.Getenv("RPM_DIR")
-	if path == "" {
-		path = "testdata"
-	}
-
-	// open and read the package list b.N times
+	files := getTestFiles()
+	// parse packages from byte arrays b.N times
+	var V interface{}
 	for n := 0; n < b.N; n++ {
-		pkgs, err := OpenPackageFiles(path)
-		if err != nil {
-			panic(err)
+		for _, b := range files {
+			p, err := ReadPackageFile(bytes.NewReader(b))
+			if err != nil {
+				panic(err)
+			}
+
+			V = p
 		}
 
-		X = pkgs
+		X = V
 	}
 }
