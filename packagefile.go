@@ -157,35 +157,45 @@ func (c *PackageFile) Path() string {
 	return c.path
 }
 
-// FileTime returns the time at which the RPM was last modified if known.
+// FileTime returns the time at which the RPM package file was last modified if
+// it was opened with OpenPackageFile.
 func (c *PackageFile) FileTime() time.Time {
 	return c.fileTime
 }
 
-// FileSize returns the size of the package file in bytes.
+// FileSize returns the size of the package file in bytes if it was opened with
+// OpenPackageFile.
 func (c *PackageFile) FileSize() uint64 {
 	return c.fileSize
 }
 
 // Checksum computes and returns the SHA256 checksum (encoded in hexidecimal) of
 // the package file.
+//
+// Checksum is a convenience function for tools that make use of package file
+// SHA256 checksums. These might include many of the databases files created by
+// the createrepo tool.
+//
+// Checksum reopens the package using the file path that was given via
+// OpenPackageFile. If the package was opened with any other method, Checksum
+// will return "File not found".
 func (c *PackageFile) Checksum() (string, error) {
 	if c.Path() == "" {
 		return "", fmt.Errorf("File not found")
 	}
 
-	if f, err := os.Open(c.Path()); err != nil {
+	f, err := os.Open(c.Path())
+	if err != nil {
 		return "", err
-	} else {
-		defer f.Close()
-
-		s := sha256.New()
-		if _, err := io.Copy(s, f); err != nil {
-			return "", err
-		}
-
-		return hex.EncodeToString(s.Sum(nil)), nil
 	}
+	defer f.Close()
+
+	s := sha256.New()
+	if _, err := io.Copy(s, f); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(s.Sum(nil)), nil
 }
 
 // ChecksumType returns "sha256"
