@@ -2,7 +2,6 @@ package rpm
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	"github.com/cavaliercoder/badio"
@@ -28,7 +27,7 @@ func TestLeadErrors(t *testing.T) {
 		}
 
 		// simulate length error
-		f.Seek(0, io.SeekStart)
+		f.Seek(0, 0) // io.SeekStart since ~1.7
 		r = badio.NewTruncateReader(f, 95)
 		_, err = ReadPackageLead(r)
 		if err != ErrBadLeadLength {
@@ -36,8 +35,8 @@ func TestLeadErrors(t *testing.T) {
 		}
 
 		// simulate version error
-		f.Seek(0, io.SeekStart)
-		b[4] = 0x02 // TODO: this is not thread safe and coul
+		f.Seek(0, 0) // io.SeekStart since ~1.7
+		b[4] = 0x02
 		_, err = ReadPackageLead(bytes.NewReader(b))
 		if err != ErrUnsupportedVersion {
 			t.Errorf("Expected version error in lead section, got: %v", err)
