@@ -13,7 +13,7 @@ type Header struct {
 	Version    int
 	IndexCount int
 	Length     int
-	Indexes    IndexEntries
+	Indexes    IndexList
 	Start      int
 	End        int
 }
@@ -107,12 +107,11 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		return nil, ErrBadIndexCount
 	}
 
-	h.Indexes = make(IndexEntries, h.IndexCount)
-
 	// read indexes
 	indexLength := 16 * h.IndexCount
-	indexes := make([]byte, indexLength)
-	_, err = io.ReadFull(r, indexes)
+	indexes := make([]*IndexEntry, h.IndexCount)
+	b := make([]byte, indexLength)
+	_, err = io.ReadFull(r, b)
 	if err != nil {
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return nil, ErrBadIndexLength
@@ -122,11 +121,11 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 
 	for x := 0; x < h.IndexCount; x++ {
 		o := 16 * x
-		index := IndexEntry{
-			Tag:       int(binary.BigEndian.Uint32(indexes[o : o+4])),
-			Type:      int(binary.BigEndian.Uint32(indexes[o+4 : o+8])),
-			Offset:    int(binary.BigEndian.Uint32(indexes[o+8 : o+12])),
-			ItemCount: int(binary.BigEndian.Uint32(indexes[o+12 : o+16])),
+		index := &IndexEntry{
+			Tag:       int(binary.BigEndian.Uint32(b[o : o+4])),
+			Type:      int(binary.BigEndian.Uint32(b[o+4 : o+8])),
+			Offset:    int(binary.BigEndian.Uint32(b[o+8 : o+12])),
+			ItemCount: int(binary.BigEndian.Uint32(b[o+12 : o+16])),
 		}
 
 		// validate index offset
@@ -135,7 +134,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		}
 
 		// append
-		h.Indexes[x] = index
+		indexes[x] = index
 	}
 
 	// read the "store"
@@ -151,7 +150,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 
 	// parse the value of each index from the store
 	for x := 0; x < h.IndexCount; x++ {
-		index := h.Indexes[x]
+		index := indexes[x]
 		o := index.Offset
 
 		if index.ItemCount == 0 {
@@ -265,10 +264,10 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			// unknown data type
 			return nil, ErrBadIndexType
 		}
-
-		// save in array
-		h.Indexes[x] = index
 	}
+
+	h.Indexes = NewIndexList()
+	h.Indexes.Add(indexes...)
 
 	// calculate location of the end of the header by padding to a multiple of 8
 	o := 8 - int(math.Mod(float64(h.Length), 8))
