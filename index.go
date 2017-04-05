@@ -28,18 +28,12 @@ type IndexEntry struct {
 }
 
 // IndexEntries is an array of IndexEntry structs.
-type IndexEntries []IndexEntry
+type IndexEntries map[int]*IndexEntry
 
 // IndexByTag returns a pointer to an IndexEntry with the given tag ID or nil if
 // the tag is not found.
 func (c IndexEntries) IndexByTag(tag int) *IndexEntry {
-	for _, e := range c {
-		if e.Tag == tag {
-			return &e
-		}
-	}
-
-	return nil
+	return c[tag]
 }
 
 // StringByTag returns the string value of an IndexEntry or an empty string if

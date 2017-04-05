@@ -135,7 +135,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		}
 
 		// append
-		h.Indexes[x] = index
+		h.Indexes[index.Tag] = &index
 	}
 
 	// read the "store"
@@ -150,8 +150,8 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	}
 
 	// parse the value of each index from the store
-	for x := 0; x < h.IndexCount; x++ {
-		index := h.Indexes[x]
+	for _, index := range h.Indexes {
+
 		o := index.Offset
 
 		if index.ItemCount == 0 {
@@ -163,7 +163,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			vals := make([]uint8, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
 				if o >= len(store) {
-					return nil, fmt.Errorf("uint8 value for index %d is out of range", x+1)
+					return nil, fmt.Errorf("uint8 value for index %d is out of range", index.Tag)
 				}
 
 				vals[v] = uint8(store[o])
@@ -176,7 +176,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			vals := make([]int8, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
 				if o >= len(store) {
-					return nil, fmt.Errorf("int8 value for index %d is out of range", x+1)
+					return nil, fmt.Errorf("int8 value for index %d is out of range", index.Tag)
 				}
 
 				vals[v] = int8(store[o])
@@ -189,7 +189,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			vals := make([]int16, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
 				if o+2 > len(store) {
-					return nil, fmt.Errorf("int16 value for index %d is out of range", x+1)
+					return nil, fmt.Errorf("int16 value for index %d is out of range", index.Tag)
 				}
 
 				vals[v] = int16(binary.BigEndian.Uint16(store[o : o+2]))
@@ -202,7 +202,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			vals := make([]int32, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
 				if o+4 > len(store) {
-					return nil, fmt.Errorf("int32 value for index %d is out of range", x+1)
+					return nil, fmt.Errorf("int32 value for index %d is out of range", index.Tag)
 				}
 
 				vals[v] = int32(binary.BigEndian.Uint32(store[o : o+4]))
@@ -215,7 +215,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			vals := make([]int64, index.ItemCount)
 			for v := 0; v < index.ItemCount; v++ {
 				if o+8 > len(store) {
-					return nil, fmt.Errorf("int64 value for index %d is out of range", x+1)
+					return nil, fmt.Errorf("int64 value for index %d is out of range", index.Tag)
 				}
 
 				vals[v] = int64(binary.BigEndian.Uint64(store[o : o+8]))
@@ -226,7 +226,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 
 		case IndexDataTypeBinary:
 			if o+index.ItemCount > len(store) {
-				return nil, fmt.Errorf("[]byte value for index %d is out of range", x+1)
+				return nil, fmt.Errorf("[]byte value for index %d is out of range", index.Tag)
 			}
 
 			b := make([]byte, index.ItemCount)
@@ -237,7 +237,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		case IndexDataTypeString, IndexDataTypeStringArray, IndexDataTypeI8NString:
 			// allow atleast one byte per string
 			if o+index.ItemCount > len(store) {
-				return nil, fmt.Errorf("[]string value for index %d is out of range", x+1)
+				return nil, fmt.Errorf("[]string value for index %d is out of range", index.Tag)
 			}
 
 			vals := make([]string, index.ItemCount)
@@ -249,7 +249,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 				}
 
 				if j == len(store) {
-					return nil, fmt.Errorf("string value for index %d is out of range", x+1)
+					return nil, fmt.Errorf("string value for index %d is out of range", index.Tag)
 				}
 
 				vals[s] = string(store[o : o+j])
@@ -267,7 +267,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		}
 
 		// save in array
-		h.Indexes[x] = index
+		//h.Indexes[x] = index
 	}
 
 	// calculate location of the end of the header by padding to a multiple of 8
