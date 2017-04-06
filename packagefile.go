@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,6 +70,16 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 // OpenPackageFile reads a rpm package from the file systems and returns a pointer
 // to it.
 func OpenPackageFile(path string) (*PackageFile, error) {
+	lc := strings.ToLower(path)
+	if strings.HasPrefix(lc, "http://") || strings.HasPrefix(lc, "https://") {
+		return openPackageURL(path)
+	}
+
+	return openPackageFile(path)
+}
+
+// openPackageFile reads package info from the file system
+func openPackageFile(path string) (*PackageFile, error) {
 	// stat file
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -92,6 +103,29 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 	p.path = path
 	p.fileSize = uint64(fi.Size())
 	p.fileTime = fi.ModTime()
+
+	return p, nil
+}
+
+// openPackageURL reads package info from a HTTP URL
+func openPackageURL(path string) (*PackageFile, error) {
+	resp, err := http.Get(path)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	p, err := ReadPackageFile(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	p.path = path
+	p.fileSize = uint64(resp.ContentLength)
+	if lm := resp.Header.Get("Last-Modified"); len(lm) > 0 {
+		t, _ := time.Parse(time.RFC1123, lm) // ignore malformed timestamps
+		p.fileTime = t
+	}
 
 	return p, nil
 }
