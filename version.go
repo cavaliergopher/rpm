@@ -9,7 +9,7 @@ import (
 
 // alphanumPattern is a regular expression to match all sequences of numeric
 // characters or alphanumeric characters.
-var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)")
+var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)|(~)")
 
 // PackageVersion is an interface which holds version information for a single
 // package version.
@@ -86,12 +86,20 @@ func rpmvercmp(a, b string) int {
 	segsb := alphanumPattern.FindAllString(b, -1)
 	segs := int(math.Min(float64(len(segsa)), float64(len(segsb))))
 
-	// TODO: handle tildes in rpmvercmp
-
 	// compare each segment
 	for i := 0; i < segs; i++ {
 		a := segsa[i]
 		b := segsb[i]
+
+		// compare tildes
+		if []rune(a)[0] == '~' || []rune(b)[0] == '~' {
+			if []rune(a)[0] != '~' {
+				return 1
+			}
+			if []rune(b)[0] != '~' {
+				return -1
+			}
+		}
 
 		if unicode.IsNumber([]rune(a)[0]) {
 			// numbers are always greater than alphas
@@ -129,10 +137,16 @@ func rpmvercmp(a, b string) int {
 		return 0
 	}
 
+	// If there is a tilde in a segment past the min number of segments, find it.
+	if len(segsa) > segs && []rune(segsa[segs])[0] == '~' {
+		return -1
+	} else if len(segsb) > segs && []rune(segsb[segs])[0] == '~' {
+		return 1
+	}
+
 	// whoever has the most segments wins
 	if len(segsa) > len(segsb) {
 		return 1
-	} else {
-		return -1
 	}
+	return -1
 }
