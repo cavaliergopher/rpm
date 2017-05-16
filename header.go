@@ -154,10 +154,6 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 		index := h.Indexes[x]
 		o := index.Offset
 
-		if index.ItemCount == 0 {
-			return nil, ErrBadIndexValueCount
-		}
-
 		switch index.Type {
 		case IndexDataTypeChar:
 			vals := make([]uint8, index.ItemCount)
