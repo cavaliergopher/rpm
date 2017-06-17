@@ -17,7 +17,7 @@ import (
 // RPMDate is the Time format used by rpm tools
 const RPMDate = "Mon Jan _2 15:04:05 2006"
 
-// A PackageFile is an RPM package definition loaded directly from the pacakge
+// A PackageFile is an RPM package definition loaded directly from the package
 // file itself.
 type PackageFile struct {
 	Lead    Lead
@@ -206,7 +206,7 @@ func (c *PackageFile) FileSize() uint64 {
 	return c.fileSize
 }
 
-// Checksum computes and returns the SHA256 checksum (encoded in hexidecimal) of
+// Checksum computes and returns the SHA256 checksum (encoded in hexadecimal) of
 // the package file.
 //
 // Checksum is a convenience function for tools that make use of package file
