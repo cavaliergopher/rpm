@@ -22,7 +22,7 @@ Size        : {{ .Size }}
 License     : {{ .License }}
 Signature   : {{ .GPGSignature }}
 Source RPM  : {{ .SourceRPM }}
-Build Date  : {{ .BuildTime | date }}
+Build Date  : {{ .BuildTime | timestamp }}
 Build Host  : {{ .BuildHost }}
 Packager    : {{ .Packager }}
 Vendor      : {{ .Vendor }}
@@ -64,8 +64,8 @@ func queryformat(tmpl string) (*template.Template, error) {
 			"join": func(a []string) string {
 				return strings.Join(a, ", ")
 			},
-			"date": func(t time.Time) string {
-				return t.UTC().Format(rpm.RPMDate)
+			"timestamp": func(t time.Time) rpm.Time {
+				return rpm.Time(t)
 			}}).
 		Parse(tmpl)
 }

@@ -14,9 +14,6 @@ import (
 	"time"
 )
 
-// RPMDate is the Time format used by rpm tools
-const RPMDate = "Mon Jan _2 15:04:05 2006"
-
 // A PackageFile is an RPM package definition loaded directly from the package
 // file itself.
 type PackageFile struct {
