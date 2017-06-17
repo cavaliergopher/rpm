@@ -1,4 +1,4 @@
-# go-rpm [![Build Status](https://travis-ci.org/cavaliercoder/go-rpm.svg?branch=master)](https://travis-ci.org/cavaliercoder/go-rpm) [![GoDoc](https://godoc.org/github.com/cavaliercoder/go-rpm?status.svg)](https://godoc.org/github.com/cavaliercoder/go-rpm)
+# go-rpm [![GoDoc](https://godoc.org/github.com/cavaliercoder/go-rpm?status.svg)](https://godoc.org/github.com/cavaliercoder/go-rpm) [![Build Status](https://travis-ci.org/cavaliercoder/go-rpm.svg?branch=master)](https://travis-ci.org/cavaliercoder/go-rpm) [![Go Report Card](https://goreportcard.com/badge/github.com/cavaliercoder/go-rpm)](https://goreportcard.com/report/github.com/cavaliercoder/go-rpm)
 
 A native implementation of the RPM file specification in Go.
 

@@ -66,7 +66,8 @@ func queryformat(tmpl string) (*template.Template, error) {
 			},
 			"timestamp": func(t time.Time) rpm.Time {
 				return rpm.Time(t)
-			}}).
+			},
+		}).
 		Parse(tmpl)
 }
 
