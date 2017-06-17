@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || strings.HasPrefix(os.Args[1], "-") {
 		os.Exit(usage(1))
 	}
 
@@ -28,7 +28,8 @@ func raw(path string) {
 	fmt.Printf("- path: %v\n", path)
 	p, err := rpm.OpenPackageFile(path)
 	if err != nil {
-		die("%v: %v\n", path, err)
+		fmt.Printf("  error: %v\n", err)
+		return
 	}
 
 	fmt.Printf("  headers:\n")

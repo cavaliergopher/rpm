@@ -64,7 +64,9 @@ func (b GPGSignature) String() string {
 		if int(sig.Hash) < len(gpgHashTbl) {
 			hasher = gpgHashTbl[sig.Hash]
 		}
-		return fmt.Sprintf("%v/%v, %v, Key ID %x", algo, hasher, sig.CreationTime, sig.IssuerKeyId)
+
+		ctime := sig.CreationTime.UTC().Format(RPMDate)
+		return fmt.Sprintf("%v/%v, %v, Key ID %x", algo, hasher, ctime, sig.IssuerKeyId)
 	}
 
 	return ""

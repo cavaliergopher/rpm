@@ -35,6 +35,12 @@ func main() {
 }
 ```
 
+## Tools
+
+This package also includes two tools `rpmdump` and `rpminfo`.
+
+The code for both tools demonstrates some use-cases of this package. They are
+both also useful for interrogating RPM packages.
 
 ## License
 Copyright (c) 2017 Ryan Armstrong. All rights reserved.
