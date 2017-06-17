@@ -44,9 +44,8 @@ func VersionCompare(a PackageVersion, b PackageVersion) int {
 	if ae != be {
 		if ae > be {
 			return 1
-		} else {
-			return -1
 		}
+		return -1
 	}
 
 	// compare version

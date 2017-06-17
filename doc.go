@@ -1,5 +1,5 @@
 /*
-A native implementation of the RPM file specification in Go.
+Package rpm provides a native implementation of the RPM file specification.
 
 	package main
 
