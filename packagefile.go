@@ -245,6 +245,11 @@ func (c *PackageFile) HeaderEnd() uint64 {
 	return uint64(c.Headers[1].End)
 }
 
+func (c *PackageFile) GPGSignature() GPGSignature {
+	b := c.Headers[0].Indexes.BytesByTag(1002)
+	return GPGSignature(b)
+}
+
 // For tag definitions, see:
 // https://github.com/rpm-software-management/rpm/blob/master/lib/rpmtag.h#L61
 
