@@ -124,9 +124,15 @@ func GPGCheck(r io.Reader, keyring openpgp.KeyRing) (string, error) {
 		return "", err
 	}
 
+	tags := []int{
+		1002, // RPMSIGTAG_PGP
+		1006, // RPMSIGTAG_PGP5
+		1005, // RPMSIGTAG_GPG
+	}
+
 	// get signature bytes
-	var sigval []byte = nil
-	for _, tag := range []int{RPMSIGTAG_PGP, RPMSIGTAG_PGP5, RPMSIGTAG_GPG} {
+	var sigval []byte
+	for _, tag := range tags {
 		if sigval = sigheader.Indexes.BytesByTag(tag); sigval != nil {
 			break
 		}
@@ -145,7 +151,7 @@ func GPGCheck(r io.Reader, keyring openpgp.KeyRing) (string, error) {
 	}
 
 	// get signer identity
-	for id, _ := range signer.Identities {
+	for id := range signer.Identities {
 		return id, nil
 	}
 
@@ -168,13 +174,13 @@ func MD5Check(r io.Reader) error {
 	}
 
 	// get expected payload size
-	payloadSize := sigheader.Indexes.IntByTag(RPMSIGTAG_SIZE)
+	payloadSize := sigheader.Indexes.IntByTag(1000) // RPMSIGTAG_SIZE
 	if payloadSize == 0 {
 		return fmt.Errorf("RPMSIGTAG_SIZE tag not found in signature header")
 	}
 
 	// get expected payload md5 sum
-	sigmd5 := sigheader.Indexes.BytesByTag(RPMSIGTAG_MD5)
+	sigmd5 := sigheader.Indexes.BytesByTag(1004) // RPMSIGTAG_MD5
 	if sigmd5 == nil {
 		return fmt.Errorf("RPMSIGTAG_MD5 tag not found in signature header")
 	}
