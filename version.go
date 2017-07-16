@@ -12,12 +12,12 @@ import (
 var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)|(~)")
 
 // PackageVersion is an interface which holds version information for a single
-// package version.
+// package.
 type PackageVersion interface {
 	Name() string
+	Epoch() int
 	Version() string
 	Release() string
-	Epoch() int
 }
 
 // VersionCompare compares the version details of two packages. Versions are
@@ -55,19 +55,6 @@ func VersionCompare(a PackageVersion, b PackageVersion) int {
 
 	// compare release
 	return rpmvercmp(a.Release(), b.Release())
-}
-
-// LatestPackage returns the package with the highest version in the given slice
-// of PackageVersions.
-func LatestPackage(v ...PackageVersion) PackageVersion {
-	var latest PackageVersion
-	for _, p := range v {
-		if 1 == VersionCompare(p, latest) {
-			latest = p
-		}
-	}
-
-	return latest
 }
 
 // rpmcmpver compares two version or release strings.

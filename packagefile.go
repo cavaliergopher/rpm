@@ -164,16 +164,21 @@ func OpenPackageFiles(path string) ([]*PackageFile, error) {
 
 // dependencies translates the given tag values into a slice of package
 // relationships such as provides, conflicts, obsoletes and requires.
-func (c *PackageFile) dependencies(nevrsTagId, flagsTagId, namesTagId, versionsTagId int) Dependencies {
+func (c *PackageFile) dependencies(nevrsTagID, flagsTagID, namesTagID, versionsTagID int) []Dependency {
 	// TODO: Implement NEVRS tags
+	// TODO: error handling
 
-	flgs := c.Headers[1].Indexes.IntsByTag(flagsTagId)
-	names := c.Headers[1].Indexes.StringsByTag(namesTagId)
-	vers := c.Headers[1].Indexes.StringsByTag(versionsTagId)
+	flgs := c.Headers[1].Indexes.IntsByTag(flagsTagID)
+	names := c.Headers[1].Indexes.StringsByTag(namesTagID)
+	vers := c.Headers[1].Indexes.StringsByTag(versionsTagID)
 
-	deps := make(Dependencies, len(names))
+	deps := make([]Dependency, len(names))
 	for i := 0; i < len(names); i++ {
-		deps[i] = NewDependency(int(flgs[i]), names[i], 0, vers[i], "")
+		deps[i] = &dependency{
+			flags:   int(flgs[i]),
+			name:    names[i],
+			version: vers[i],
+		}
 	}
 
 	return deps
@@ -269,19 +274,19 @@ func (c *PackageFile) Epoch() int {
 	return int(c.Headers[1].Indexes.IntByTag(1003))
 }
 
-func (c *PackageFile) Requires() Dependencies {
+func (c *PackageFile) Requires() []Dependency {
 	return c.dependencies(5041, 1048, 1049, 1050)
 }
 
-func (c *PackageFile) Provides() Dependencies {
+func (c *PackageFile) Provides() []Dependency {
 	return c.dependencies(5042, 1112, 1047, 1113)
 }
 
-func (c *PackageFile) Conflicts() Dependencies {
+func (c *PackageFile) Conflicts() []Dependency {
 	return c.dependencies(5044, 1053, 1054, 1055)
 }
 
-func (c *PackageFile) Obsoletes() Dependencies {
+func (c *PackageFile) Obsoletes() []Dependency {
 	return c.dependencies(5043, 1114, 1090, 1115)
 }
 

@@ -10,24 +10,24 @@ type DepTest struct {
 	str string
 }
 
-func TestDependencies(t *testing.T) {
+func TestDependencyStrings(t *testing.T) {
 	tests := []DepTest{
-		{NewDependency(DepFlagAny, "test", 0, "", ""), "test"},
-		{NewDependency(DepFlagAny, "test", 0, "1", ""), "test 1"},
-		{NewDependency(DepFlagAny, "test", 0, "1", "2"), "test 1.2"},
-		{NewDependency(DepFlagAny, "test", 1, "2", "3"), "test 2.3"},
-		{NewDependency(DepFlagLesser, "test", 0, "1", ""), "test < 1"},
-		{NewDependency(DepFlagLesser, "test", 0, "1", "2"), "test < 1.2"},
-		{NewDependency(DepFlagLesser, "test", 1, "2", "3"), "test < 2.3"},
-		{NewDependency(DepFlagLesserOrEqual, "test", 0, "1", ""), "test <= 1"},
-		{NewDependency(DepFlagLesserOrEqual, "test", 0, "1", "2"), "test <= 1.2"},
-		{NewDependency(DepFlagLesserOrEqual, "test", 1, "2", "3"), "test <= 2.3"},
-		{NewDependency(DepFlagGreaterOrEqual, "test", 0, "1", ""), "test >= 1"},
-		{NewDependency(DepFlagGreaterOrEqual, "test", 0, "1", "2"), "test >= 1.2"},
-		{NewDependency(DepFlagGreaterOrEqual, "test", 1, "2", "3"), "test >= 2.3"},
-		{NewDependency(DepFlagLesser, "test", 0, "1", ""), "test < 1"},
-		{NewDependency(DepFlagLesser, "test", 0, "1", "2"), "test < 1.2"},
-		{NewDependency(DepFlagLesser, "test", 1, "2", "3"), "test < 2.3"},
+		{&dependency{DepFlagAny, "test", 0, "", ""}, "test"},
+		{&dependency{DepFlagAny, "test", 0, "1", ""}, "test 1"},
+		{&dependency{DepFlagAny, "test", 0, "1", "2"}, "test 1.2"},
+		{&dependency{DepFlagAny, "test", 1, "2", "3"}, "test 2.3"},
+		{&dependency{DepFlagLesser, "test", 0, "1", ""}, "test < 1"},
+		{&dependency{DepFlagLesser, "test", 0, "1", "2"}, "test < 1.2"},
+		{&dependency{DepFlagLesser, "test", 1, "2", "3"}, "test < 2.3"},
+		{&dependency{DepFlagLesserOrEqual, "test", 0, "1", ""}, "test <= 1"},
+		{&dependency{DepFlagLesserOrEqual, "test", 0, "1", "2"}, "test <= 1.2"},
+		{&dependency{DepFlagLesserOrEqual, "test", 1, "2", "3"}, "test <= 2.3"},
+		{&dependency{DepFlagGreaterOrEqual, "test", 0, "1", ""}, "test >= 1"},
+		{&dependency{DepFlagGreaterOrEqual, "test", 0, "1", "2"}, "test >= 1.2"},
+		{&dependency{DepFlagGreaterOrEqual, "test", 1, "2", "3"}, "test >= 2.3"},
+		{&dependency{DepFlagLesser, "test", 0, "1", ""}, "test < 1"},
+		{&dependency{DepFlagLesser, "test", 0, "1", "2"}, "test < 1.2"},
+		{&dependency{DepFlagLesser, "test", 1, "2", "3"}, "test < 2.3"},
 	}
 
 	for i, test := range tests {
