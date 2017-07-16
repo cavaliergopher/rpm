@@ -13,6 +13,7 @@ clean: clean-fuzz
 
 get-deps:
 	go get github.com/cavaliercoder/badio
+	go get github.com/cavaliercoder/go-cpio
 	go get golang.org/x/crypto/openpgp
 
 rpm-fuzz.zip: *.go
