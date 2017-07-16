@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+// buffer to discard padding and prevent allocations
+var padBuf [8]byte
 
 // A PackageFile is an RPM package definition loaded directly from the package
 // file itself.
@@ -24,6 +26,10 @@ type PackageFile struct {
 	fileSize uint64
 	fileTime time.Time
 }
+
+const (
+	headerCount = 2
+)
 
 // ReadPackageFile reads a rpm package file from a stream and returns a pointer
 // to it.
@@ -42,7 +48,7 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	// read signature and header headers
 	offset := 96
 	p.Headers = make(Headers, 2)
-	for i := 0; i < 2; i++ {
+	for i := 0; i < headerCount; i++ {
 		// parse header
 		h, err := ReadPackageHeader(r)
 		if err != nil {
@@ -54,12 +60,16 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 		h.End = h.Start + 16 + (16 * h.IndexCount) + h.Length
 		offset = h.End
 
-		// calculate location of the end of the header by padding to a multiple of 8
-		pad := 8 - int(math.Mod(float64(h.Length), 8))
-		if pad < 8 {
+		// pad to next header except on last header
+		if i < headerCount-1 {
+			pad := (8 - (h.Length % 8)) % 8
+			if pad > 0 {
+				if _, err := io.ReadFull(r, padBuf[:pad]); err != nil {
+					return nil, fmt.Errorf("Error seeking to next header: %v", err)
+				}
+			}
 			offset += pad
 		}
-
 		// append
 		p.Headers[i] = *h
 	}

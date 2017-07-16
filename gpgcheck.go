@@ -91,22 +91,31 @@ var (
 // returns a pointer to the signature header.
 func rpmReadSigHeader(r io.Reader) (*Header, error) {
 	// read package lead
-	if lead, err := ReadPackageLead(r); err != nil {
-		return nil, err
-	} else {
-		// check signature type
-		if lead.SignatureType != 5 { // RPMSIGTYPE_HEADERSIG
-			return nil, fmt.Errorf("Unsupported signature type: 0x%x", lead.SignatureType)
-		}
-	}
-
-	// read signature header
-	sigheader, err := ReadPackageHeader(r)
+	lead, err := ReadPackageLead(r)
 	if err != nil {
 		return nil, err
 	}
 
-	return sigheader, nil
+	// check signature type
+	if lead.SignatureType != 5 { // RPMSIGTYPE_HEADERSIG
+		return nil, fmt.Errorf("Unsupported signature type: 0x%x", lead.SignatureType)
+	}
+
+	// read signature header
+	hdr, err := ReadPackageHeader(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// pad to next header
+	pad := (8 - (hdr.Length % 8)) % 8
+	if pad > 0 {
+		if _, err := io.ReadFull(r, padBuf[:pad]); err != nil {
+			return nil, fmt.Errorf("Error seeking to next header: %v", err)
+		}
+	}
+
+	return hdr, nil
 }
 
 // GPGCheck validates the integrity of a RPM package file read from the given
