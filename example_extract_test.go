@@ -13,7 +13,7 @@ import (
 
 // ExampleExtractArchive demonstrates how to use go-rpm with the compress/gzip
 // library and go-cpio to extract all files from a package archive.
-func ExampleExtractArchive() {
+func Example() {
 	// create destination directory
 	path, err := ioutil.TempDir("", "rpm-example-")
 	if err != nil {
