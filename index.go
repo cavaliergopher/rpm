@@ -42,19 +42,6 @@ func (c IndexEntries) IndexByTag(tag int) *IndexEntry {
 	return nil
 }
 
-// StringByTag returns the string value of an IndexEntry or an empty string if
-// the tag is not found or has no value.
-func (c IndexEntries) StringByTag(tag int) string {
-	i := c.IndexByTag(tag)
-	if i == nil || i.Value == nil {
-		return ""
-	}
-
-	s := i.Value.([]string)
-
-	return s[0]
-}
-
 // StringsByTag returns the slice of string values of an IndexEntry or nil if
 // the tag is not found or has no value.
 func (c IndexEntries) StringsByTag(tag int) []string {
@@ -62,8 +49,21 @@ func (c IndexEntries) StringsByTag(tag int) []string {
 	if i == nil || i.Value == nil {
 		return nil
 	}
+	s, ok := i.Value.([]string)
+	if !ok {
+		return nil
+	}
+	return s
+}
 
-	return i.Value.([]string)
+// StringByTag returns the string value of an IndexEntry or an empty string if
+// the tag is not found or has no value.
+func (c IndexEntries) StringByTag(tag int) string {
+	s := c.StringsByTag(tag)
+	if s == nil || len(s) == 0 {
+		return ""
+	}
+	return s[0]
 }
 
 // IntsByTag returns the int64 values of an IndexEntry or nil if the tag is not
@@ -103,16 +103,32 @@ func (c IndexEntries) IntByTag(tag int) int64 {
 	if i != nil && i.Value != nil {
 		switch i.Type {
 		case IndexDataTypeChar, IndexDataTypeInt8:
-			return int64(i.Value.([]int8)[0])
+			v, ok := i.Value.([]int8)
+			if !ok {
+				return 0
+			}
+			return int64(v[0])
 
 		case IndexDataTypeInt16:
-			return int64(i.Value.([]int16)[0])
+			v, ok := i.Value.([]int16)
+			if !ok {
+				return 0
+			}
+			return int64(v[0])
 
 		case IndexDataTypeInt32:
-			return int64(i.Value.([]int32)[0])
+			v, ok := i.Value.([]int32)
+			if !ok {
+				return 0
+			}
+			return int64(v[0])
 
 		case IndexDataTypeInt64:
-			return int64(i.Value.([]int64)[0])
+			v, ok := i.Value.([]int64)
+			if !ok {
+				return 0
+			}
+			return v[0]
 		}
 	}
 
@@ -126,24 +142,28 @@ func (c IndexEntries) BytesByTag(tag int) []byte {
 	if i == nil || i.Value == nil {
 		return nil
 	}
-
-	return i.Value.([]byte)
+	b, ok := i.Value.([]byte)
+	if !ok {
+		return nil
+	}
+	return b
 }
 
 // TimesByTag returns the value of an IndexEntry as a slice of Go native
 // timestamps or nil if the tag is not found or has no value.
 func (c IndexEntries) TimesByTag(tag int) []time.Time {
 	ix := c.IndexByTag(tag)
-
 	if ix == nil || ix.Value == nil {
 		return nil
 	}
-
+	v, ok := ix.Value.([]int32)
+	if !ok {
+		return nil
+	}
 	vals := make([]time.Time, ix.ItemCount)
 	for i := 0; i < ix.ItemCount; i++ {
-		vals[i] = time.Unix(int64(ix.Value.([]int32)[i]), 0)
+		vals[i] = time.Unix(int64(v[i]), 0)
 	}
-
 	return vals
 }
 
@@ -154,6 +174,5 @@ func (c IndexEntries) TimeByTag(tag int) time.Time {
 	if vals == nil || len(vals) == 0 {
 		return time.Time{}
 	}
-
 	return vals[0]
 }
