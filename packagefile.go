@@ -34,7 +34,7 @@ const (
 // ReadPackageFile reads a rpm package file from a stream and returns a pointer
 // to it.
 func ReadPackageFile(r io.Reader) (*PackageFile, error) {
-	// See: http://www.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
+	// See: http://ftp.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
 	p := &PackageFile{}
 
 	// read the deprecated "lead"
@@ -448,4 +448,16 @@ func (c *PackageFile) RPMVersion() string {
 
 func (c *PackageFile) Platform() string {
 	return c.Headers[1].Indexes.StringByTag(1132)
+}
+
+// PayloadFormat returns the name of the format used for the package payload.
+// Typically cpio.
+func (c *PackageFile) PayloadFormat() string {
+	return c.Headers[1].Indexes.StringByTag(1124)
+}
+
+// PayloadCompression returns the name of the compression used for the package
+// payload. Typically xz.
+func (c *PackageFile) PayloadCompression() string {
+	return c.Headers[1].Indexes.StringByTag(1125)
 }
