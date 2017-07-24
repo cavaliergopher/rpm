@@ -25,6 +25,8 @@ type PackageFile struct {
 	path     string
 	fileSize uint64
 	fileTime time.Time
+
+	files []FileInfo // memoize .Files()
 }
 
 const (
@@ -77,8 +79,8 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	return p, nil
 }
 
-// OpenPackageFile reads a rpm package from the file systems and returns a pointer
-// to it.
+// OpenPackageFile reads a rpm package from the file system or a URL and returns
+// a pointer to it.
 func OpenPackageFile(path string) (*PackageFile, error) {
 	lc := strings.ToLower(path)
 	if strings.HasPrefix(lc, "http://") || strings.HasPrefix(lc, "https://") {
@@ -178,9 +180,9 @@ func (c *PackageFile) dependencies(nevrsTagID, flagsTagID, namesTagID, versionsT
 	// TODO: Implement NEVRS tags
 	// TODO: error handling
 
-	flgs := c.Headers[1].Indexes.IntsByTag(flagsTagID)
-	names := c.Headers[1].Indexes.StringsByTag(namesTagID)
-	vers := c.Headers[1].Indexes.StringsByTag(versionsTagID)
+	flgs := c.GetInts(1, flagsTagID)
+	names := c.GetStrings(1, namesTagID)
+	vers := c.GetStrings(1, versionsTagID)
 
 	deps := make([]Dependency, len(names))
 	for i := 0; i < len(names); i++ {
@@ -198,6 +200,56 @@ func (c *PackageFile) dependencies(nevrsTagID, flagsTagID, namesTagID, versionsT
 // '[name]-[version]-[release].[architecture]'.
 func (c *PackageFile) String() string {
 	return fmt.Sprintf("%s-%s-%s.%s", c.Name(), c.Version(), c.Release(), c.Architecture())
+}
+
+// GetBytes returns the value of the given tag in the given header. Nil is
+// returned if the header or tag do not exist, or it the tag exists but is a
+// different type.
+func (c *PackageFile) GetBytes(header, tag int) []byte {
+	if header >= len(c.Headers) {
+		return nil
+	}
+	return c.GetBytes(1, tag)
+}
+
+// GetStrings returns the string values of the given tag in the given header.
+// Nil is returned if the header or tag do not exist, or if the tag exists but
+// is a different type.
+func (c *PackageFile) GetStrings(header, tag int) []string {
+	if header >= len(c.Headers) {
+		return nil
+	}
+	return c.Headers[header].Indexes.StringsByTag(tag)
+}
+
+// GetString returns the string value of the given tag in the given header. Nil
+// is returned if the header or tag do not exist, or if the tag exists but is a
+// different type.
+func (c *PackageFile) GetString(header, tag int) string {
+	if header >= len(c.Headers) {
+		return ""
+	}
+	return c.Headers[header].Indexes.StringByTag(tag)
+}
+
+// GetInts returns the int64 values of the given tag in the given header. Nil is
+// returned if the header or tag do not exist, or if the tag exists but is a
+// different type.
+func (c *PackageFile) GetInts(header, tag int) []int64 {
+	if header >= len(c.Headers) {
+		return nil
+	}
+	return c.Headers[header].Indexes.IntsByTag(tag)
+}
+
+// GetInt returns the int64 value of the given tag in the given header. Zero is
+// returned if the header or tag do not exist, or if the tag exists but is a
+// different type.
+func (c *PackageFile) GetInt(header, tag int) int64 {
+	if header >= len(c.Headers) {
+		return 0
+	}
+	return c.Headers[header].Indexes.IntByTag(tag)
 }
 
 // Path returns the path which was given to open a package file if it was opened
@@ -261,27 +313,26 @@ func (c *PackageFile) HeaderEnd() uint64 {
 }
 
 func (c *PackageFile) GPGSignature() GPGSignature {
-	b := c.Headers[0].Indexes.BytesByTag(1002)
-	return GPGSignature(b)
+	return GPGSignature(c.GetBytes(0, 1002))
 }
 
 // For tag definitions, see:
 // https://github.com/rpm-software-management/rpm/blob/master/lib/rpmtag.h#L61
 
 func (c *PackageFile) Name() string {
-	return c.Headers[1].Indexes.StringByTag(1000)
+	return c.GetString(1, 1000)
 }
 
 func (c *PackageFile) Version() string {
-	return c.Headers[1].Indexes.StringByTag(1001)
+	return c.GetString(1, 1001)
 }
 
 func (c *PackageFile) Release() string {
-	return c.Headers[1].Indexes.StringByTag(1002)
+	return c.GetString(1, 1002)
 }
 
 func (c *PackageFile) Epoch() int {
-	return int(c.Headers[1].Indexes.IntByTag(1003))
+	return int(c.GetInt(1, 1003))
 }
 
 func (c *PackageFile) Requires() []Dependency {
@@ -303,18 +354,22 @@ func (c *PackageFile) Obsoletes() []Dependency {
 // Files returns file information for each file that is installed by this RPM
 // package.
 func (c *PackageFile) Files() []FileInfo {
-	ixs := c.Headers[1].Indexes.IntsByTag(1116)
-	names := c.Headers[1].Indexes.StringsByTag(1117)
-	dirs := c.Headers[1].Indexes.StringsByTag(1118)
-	modes := c.Headers[1].Indexes.IntsByTag(1030)
-	sizes := c.Headers[1].Indexes.IntsByTag(1028)
-	times := c.Headers[1].Indexes.IntsByTag(1034)
-	owners := c.Headers[1].Indexes.StringsByTag(1039)
-	groups := c.Headers[1].Indexes.StringsByTag(1040)
+	if c.files != nil {
+		return c.files
+	}
 
-	files := make([]FileInfo, len(names))
+	ixs := c.GetInts(1, 1116)
+	names := c.GetStrings(1, 1117)
+	dirs := c.GetStrings(1, 1118)
+	modes := c.GetInts(1, 1030)
+	sizes := c.GetInts(1, 1028)
+	times := c.GetInts(1, 1034)
+	owners := c.GetStrings(1, 1039)
+	groups := c.GetStrings(1, 1040)
+
+	c.files = make([]FileInfo, len(names))
 	for i := 0; i < len(names); i++ {
-		files[i] = FileInfo{
+		c.files[i] = FileInfo{
 			name:    dirs[ixs[i]] + names[i],
 			mode:    os.FileMode(modes[i]),
 			size:    sizes[i],
@@ -324,15 +379,15 @@ func (c *PackageFile) Files() []FileInfo {
 		}
 	}
 
-	return files
+	return c.files
 }
 
 func (c *PackageFile) Summary() string {
-	return strings.Join(c.Headers[1].Indexes.StringsByTag(1004), "\n")
+	return strings.Join(c.GetStrings(1, 1004), "\n")
 }
 
 func (c *PackageFile) Description() string {
-	return strings.Join(c.Headers[1].Indexes.StringsByTag(1005), "\n")
+	return strings.Join(c.GetStrings(1, 1005), "\n")
 }
 
 func (c *PackageFile) BuildTime() time.Time {
@@ -340,7 +395,7 @@ func (c *PackageFile) BuildTime() time.Time {
 }
 
 func (c *PackageFile) BuildHost() string {
-	return c.Headers[1].Indexes.StringByTag(1007)
+	return c.GetString(1, 1007)
 }
 
 func (c *PackageFile) InstallTime() time.Time {
@@ -349,115 +404,115 @@ func (c *PackageFile) InstallTime() time.Time {
 
 // Size specifies the disk space consumed by installation of the package.
 func (c *PackageFile) Size() uint64 {
-	return uint64(c.Headers[1].Indexes.IntByTag(1009))
+	return uint64(c.GetInt(1, 1009))
 }
 
 // ArchiveSize specifies the size of the archived payload of the package in
 // bytes.
 func (c *PackageFile) ArchiveSize() uint64 {
-	if i := uint64(c.Headers[0].Indexes.IntByTag(1007)); i > 0 {
+	if i := uint64(c.GetInt(0, 1007)); i > 0 {
 		return i
 	}
 
-	return uint64(c.Headers[1].Indexes.IntByTag(1046))
+	return uint64(c.GetInt(1, 1046))
 }
 
 func (c *PackageFile) Distribution() string {
-	return c.Headers[1].Indexes.StringByTag(1010)
+	return c.GetString(1, 1010)
 }
 
 func (c *PackageFile) Vendor() string {
-	return c.Headers[1].Indexes.StringByTag(1011)
+	return c.GetString(1, 1011)
 }
 
 func (c *PackageFile) GIFImage() []byte {
-	return c.Headers[1].Indexes.BytesByTag(1012)
+	return c.GetBytes(1, 1012)
 }
 
 func (c *PackageFile) XPMImage() []byte {
-	return c.Headers[1].Indexes.BytesByTag(1013)
+	return c.GetBytes(1, 1013)
 }
 
 func (c *PackageFile) License() string {
-	return c.Headers[1].Indexes.StringByTag(1014)
+	return c.GetString(1, 1014)
 }
 
 func (c *PackageFile) Packager() string {
-	return c.Headers[1].Indexes.StringByTag(1015)
+	return c.GetString(1, 1015)
 }
 
 func (c *PackageFile) Groups() []string {
-	return c.Headers[1].Indexes.StringsByTag(1016)
+	return c.GetStrings(1, 1016)
 }
 
 func (c *PackageFile) ChangeLog() []string {
-	return c.Headers[1].Indexes.StringsByTag(1017)
+	return c.GetStrings(1, 1017)
 }
 
 func (c *PackageFile) Source() []string {
-	return c.Headers[1].Indexes.StringsByTag(1018)
+	return c.GetStrings(1, 1018)
 }
 
 func (c *PackageFile) Patch() []string {
-	return c.Headers[1].Indexes.StringsByTag(1019)
+	return c.GetStrings(1, 1019)
 }
 
 func (c *PackageFile) URL() string {
-	return c.Headers[1].Indexes.StringByTag(1020)
+	return c.GetString(1, 1020)
 }
 
 func (c *PackageFile) OperatingSystem() string {
-	return c.Headers[1].Indexes.StringByTag(1021)
+	return c.GetString(1, 1021)
 }
 
 func (c *PackageFile) Architecture() string {
-	return c.Headers[1].Indexes.StringByTag(1022)
+	return c.GetString(1, 1022)
 }
 
 func (c *PackageFile) PreInstallScript() string {
-	return c.Headers[1].Indexes.StringByTag(1023)
+	return c.GetString(1, 1023)
 }
 
 func (c *PackageFile) PostInstallScript() string {
-	return c.Headers[1].Indexes.StringByTag(1024)
+	return c.GetString(1, 1024)
 }
 
 func (c *PackageFile) PreUninstallScript() string {
-	return c.Headers[1].Indexes.StringByTag(1025)
+	return c.GetString(1, 1025)
 }
 
 func (c *PackageFile) PostUninstallScript() string {
-	return c.Headers[1].Indexes.StringByTag(1026)
+	return c.GetString(1, 1026)
 }
 
 func (c *PackageFile) OldFilenames() []string {
-	return c.Headers[1].Indexes.StringsByTag(1027)
+	return c.GetStrings(1, 1027)
 }
 
 func (c *PackageFile) Icon() []byte {
-	return c.Headers[1].Indexes.BytesByTag(1043)
+	return c.GetBytes(1, 1043)
 }
 
 func (c *PackageFile) SourceRPM() string {
-	return c.Headers[1].Indexes.StringByTag(1044)
+	return c.GetString(1, 1044)
 }
 
 func (c *PackageFile) RPMVersion() string {
-	return c.Headers[1].Indexes.StringByTag(1064)
+	return c.GetString(1, 1064)
 }
 
 func (c *PackageFile) Platform() string {
-	return c.Headers[1].Indexes.StringByTag(1132)
+	return c.GetString(1, 1132)
 }
 
 // PayloadFormat returns the name of the format used for the package payload.
 // Typically cpio.
 func (c *PackageFile) PayloadFormat() string {
-	return c.Headers[1].Indexes.StringByTag(1124)
+	return c.GetString(1, 1124)
 }
 
 // PayloadCompression returns the name of the compression used for the package
 // payload. Typically xz.
 func (c *PackageFile) PayloadCompression() string {
-	return c.Headers[1].Indexes.StringByTag(1125)
+	return c.GetString(1, 1125)
 }
