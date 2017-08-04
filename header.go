@@ -22,8 +22,10 @@ type Headers []Header
 
 // Predefined sizing constraints.
 const (
-	// MAX_HEADER_SIZE is the maximum allowable header size in bytes (32 MB).
-	MAX_HEADER_SIZE = 33554432
+	// r_MaxHeaderSize is the maximum allowable header size in bytes (32 MB).
+	r_MaxHeaderSize      = 33554432
+	r_HeaderHeaderLength = 16
+	r_IndexHeaderLength  = 16
 )
 
 // Predefined header errors.
@@ -71,7 +73,7 @@ var (
 // structure in isolation.
 func ReadPackageHeader(r io.Reader) (*Header, error) {
 	// read the "header structure header"
-	header := make([]byte, 16)
+	header := make([]byte, r_HeaderHeaderLength)
 	_, err := io.ReadFull(r, header)
 	if err != nil {
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -94,7 +96,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	}
 
 	// make sure header size is in range
-	if h.Length > MAX_HEADER_SIZE {
+	if h.Length > r_MaxHeaderSize {
 		return nil, ErrBadHeaderLength
 	}
 
@@ -102,14 +104,14 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	// This test is not entirely precise as h.Length also includes the value
 	// store. It should at least help eliminate excessive buffer allocations for
 	// corrupted length values in the > h.Length ranges.
-	if h.IndexCount*16 > h.Length {
+	if h.IndexCount*r_IndexHeaderLength > h.Length {
 		return nil, ErrBadIndexCount
 	}
 
 	h.Indexes = make(IndexEntries, h.IndexCount)
 
 	// read indexes
-	indexLength := 16 * h.IndexCount
+	indexLength := r_IndexHeaderLength * h.IndexCount
 	indexes := make([]byte, indexLength)
 	_, err = io.ReadFull(r, indexes)
 	if err != nil {
@@ -120,7 +122,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	}
 
 	for x := 0; x < h.IndexCount; x++ {
-		o := 16 * x
+		o := r_IndexHeaderLength * x
 		index := IndexEntry{
 			Tag:       int(binary.BigEndian.Uint32(indexes[o : o+4])),
 			Type:      int(binary.BigEndian.Uint32(indexes[o+4 : o+8])),
@@ -234,7 +236,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 			index.Value = b
 
 		case IndexDataTypeString, IndexDataTypeStringArray, IndexDataTypeI8NString:
-			// allow atleast one byte per string
+			// allow at least one byte per string
 			if o+index.ItemCount > len(store) {
 				return nil, fmt.Errorf("[]string value for index %d is out of range", x+1)
 			}
