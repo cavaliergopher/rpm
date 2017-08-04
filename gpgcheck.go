@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"io/ioutil"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/errors"
@@ -108,11 +109,8 @@ func rpmReadSigHeader(r io.Reader) (*Header, error) {
 	}
 
 	// pad to next header
-	pad := (8 - (hdr.Length % 8)) % 8
-	if pad > 0 {
-		if _, err := io.ReadFull(r, padBuf[:pad]); err != nil {
-			return nil, fmt.Errorf("Error seeking to next header: %v", err)
-		}
+	if _, err := io.CopyN(ioutil.Discard, r, int64(8-(hdr.Length%8))%8); err != nil {
+		return nil, err
 	}
 
 	return hdr, nil

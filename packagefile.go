@@ -13,14 +13,11 @@ import (
 	"time"
 )
 
-// buffer to discard padding and prevent allocations
-var padBuf [8]byte
-
 // A PackageFile is an RPM package definition loaded directly from the package
 // file itself.
 type PackageFile struct {
 	Lead    Lead
-	Headers Headers
+	Headers []Header
 
 	path     string
 	fileSize uint64
@@ -30,7 +27,7 @@ type PackageFile struct {
 }
 
 const (
-	headerCount = 2
+	r_headerCount = 2
 )
 
 // ReadPackageFile reads a rpm package file from a stream and returns a pointer
@@ -44,35 +41,23 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	p.Lead = *lead
 
 	// read signature and header headers
-	offset := 96
-	p.Headers = make(Headers, 2)
-	for i := 0; i < headerCount; i++ {
-		// parse header
+	p.Headers = make([]Header, 2)
+	for i := 0; i < r_headerCount; i++ {
 		h, err := ReadPackageHeader(r)
 		if err != nil {
-			return nil, fmt.Errorf("%v (v%d.%d)", err, lead.VersionMajor, lead.VersionMinor)
+			return nil, err
 		}
-
-		// set start and end offsets
-		h.Start = offset
-		h.End = h.Start + 16 + (16 * h.IndexCount) + h.Length
-		offset = h.End
 
 		// pad to next header except on last header
-		if i < headerCount-1 {
-			pad := (8 - (h.Length % 8)) % 8
-			if pad > 0 {
-				if _, err := io.ReadFull(r, padBuf[:pad]); err != nil {
-					return nil, fmt.Errorf("Error seeking to next header: %v", err)
-				}
+		if i < r_headerCount-1 {
+			if _, err := io.CopyN(ioutil.Discard, r, int64(8-(h.Length%8))%8); err != nil {
+				return nil, err
 			}
-			offset += pad
 		}
-		// append
+
 		p.Headers[i] = *h
 	}
 
@@ -92,30 +77,24 @@ func OpenPackageFile(path string) (*PackageFile, error) {
 
 // openPackageFile reads package info from the file system
 func openPackageFile(path string) (*PackageFile, error) {
-	// stat file
-	fi, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	// open file
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	// read package content
-	p, err := ReadPackageFile(f)
+	fi, err := f.Stat()
 	if err != nil {
 		return nil, err
 	}
 
-	// set file info
+	p, err := ReadPackageFile(f)
+	if err != nil {
+		return nil, err
+	}
 	p.path = path
 	p.fileSize = uint64(fi.Size())
 	p.fileTime = fi.ModTime()
-
 	return p, nil
 }
 
@@ -131,14 +110,12 @@ func openPackageURL(path string) (*PackageFile, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	p.path = path
 	p.fileSize = uint64(resp.ContentLength)
 	if lm := resp.Header.Get("Last-Modified"); len(lm) > 0 {
 		t, _ := time.Parse(time.RFC1123, lm) // ignore malformed timestamps
 		p.fileTime = t
 	}
-
 	return p, nil
 }
 
@@ -183,7 +160,6 @@ func (c *PackageFile) dependencies(nevrsTagID, flagsTagID, namesTagID, versionsT
 	flgs := c.GetInts(1, flagsTagID)
 	names := c.GetStrings(1, namesTagID)
 	vers := c.GetStrings(1, versionsTagID)
-
 	deps := make([]Dependency, len(names))
 	for i := 0; i < len(names); i++ {
 		deps[i] = &dependency{
@@ -192,7 +168,6 @@ func (c *PackageFile) dependencies(nevrsTagID, flagsTagID, namesTagID, versionsT
 			version: vers[i],
 		}
 	}
-
 	return deps
 }
 
@@ -302,14 +277,6 @@ func (c *PackageFile) Checksum() (string, error) {
 // ChecksumType returns "sha256"
 func (c *PackageFile) ChecksumType() string {
 	return "sha256"
-}
-
-func (c *PackageFile) HeaderStart() uint64 {
-	return uint64(c.Headers[1].Start)
-}
-
-func (c *PackageFile) HeaderEnd() uint64 {
-	return uint64(c.Headers[1].End)
 }
 
 func (c *PackageFile) GPGSignature() GPGSignature {

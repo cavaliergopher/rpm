@@ -2,6 +2,7 @@ package rpm
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
 	"github.com/cavaliercoder/badio"
@@ -30,7 +31,7 @@ func TestLeadErrors(t *testing.T) {
 		f.Seek(0, 0) // io.SeekStart since ~1.7
 		r = badio.NewTruncateReader(f, 95)
 		_, err = ReadPackageLead(r)
-		if err != ErrBadLeadLength {
+		if err != io.ErrUnexpectedEOF {
 			t.Errorf("Expected bad length error in lead section, got: %v", err)
 		}
 
