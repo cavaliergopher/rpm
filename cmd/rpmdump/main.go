@@ -40,8 +40,6 @@ func raw(path string) {
 
 		fmt.Printf("  - index: %v\n", i)
 		fmt.Printf("    version: %v\n", h.Version)
-		fmt.Printf("    start: %v\n", h.Start)
-		fmt.Printf("    end: %v\n", h.End)
 		fmt.Printf("    length: %v\n", h.Length)
 		fmt.Printf("    indexes:\n")
 		for j, ix := range h.Indexes {
