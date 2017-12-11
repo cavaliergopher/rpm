@@ -184,7 +184,7 @@ func (c *PackageFile) GetBytes(header, tag int) []byte {
 	if header >= len(c.Headers) {
 		return nil
 	}
-	return c.GetBytes(1, tag)
+	return c.GetBytes(header + 1, tag)
 }
 
 // GetStrings returns the string values of the given tag in the given header.
