@@ -70,7 +70,7 @@ func ReadPackageHeader(r io.Reader) (*Header, error) {
 	if h.Length > r_MaxHeaderSize {
 		return nil, ErrBadHeaderLength
 	}
-	if h.IndexCount*r_IndexHeaderLength > h.Length {
+	if h.IndexCount*r_IndexHeaderLength > r_MaxHeaderSize {
 		return nil, ErrBadIndexCount
 	}
 
