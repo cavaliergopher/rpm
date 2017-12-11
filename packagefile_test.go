@@ -2,6 +2,7 @@ package rpm
 
 import (
 	"bytes"
+	"hash/crc32"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -166,6 +167,41 @@ func TestPackageFiles(t *testing.T) {
 
 		if modtime := fi.ModTime(); modtime != modtimes[i] {
 			t.Errorf("expected modtime %v but got %v for %v", modtimes[i], modtime.Unix(), name)
+		}
+	}
+}
+
+func TestByteTags(t *testing.T) {
+	tests := []struct {
+		Path            string
+		GPGSignatureCRC uint32
+	}{
+		{
+			Path:            "testdata/centos-release-6-0.el6.centos.5.i686.rpm",
+			GPGSignatureCRC: 1788312322,
+		},
+		{
+			Path:            "testdata/centos-release-6-0.el6.centos.5.x86_64.rpm",
+			GPGSignatureCRC: 3194808352,
+		},
+		{
+			Path:            "testdata/centos-release-7-2.1511.el7.centos.2.10.x86_64.rpm",
+			GPGSignatureCRC: 3466078337,
+		},
+		{
+			Path:            "testdata/epel-release-7-5.noarch.rpm",
+			GPGSignatureCRC: 2817187108,
+		},
+	}
+	for _, test := range tests {
+		p, err := OpenPackageFile(test.Path)
+		if err != nil {
+			t.Errorf("error opening %v: %v", test.Path, err)
+			continue
+		}
+
+		if crc := crc32.ChecksumIEEE(p.GPGSignature()); crc != test.GPGSignatureCRC {
+			t.Errorf("expected GPG Signature CRC %v, got %v for %v", test.GPGSignatureCRC, crc, test.Path)
 		}
 	}
 }
