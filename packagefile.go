@@ -44,7 +44,7 @@ func ReadPackageFile(r io.Reader) (*PackageFile, error) {
 	p.Lead = *lead
 
 	// read signature and header headers
-	p.Headers = make([]Header, 2)
+	p.Headers = make([]Header, r_headerCount)
 	for i := 0; i < r_headerCount; i++ {
 		h, err := ReadPackageHeader(r)
 		if err != nil {
