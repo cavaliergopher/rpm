@@ -17,6 +17,7 @@ type FileInfo struct {
 	isDir   bool
 	owner   string
 	group   string
+	digest  string
 }
 
 // compile-time check that rpm.FileInfo implements os.FileInfo interface
@@ -59,6 +60,11 @@ func (f *FileInfo) Owner() string {
 // Group is the name of the owner group of a file in a RPM package
 func (f *FileInfo) Group() string {
 	return f.group
+}
+
+// Digest is the md5sum of a file in a RPM package
+func (f *FileInfo) Digest() string {
+	return f.digest
 }
 
 // Sys is required to implement os.FileInfo and always returns nil

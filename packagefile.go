@@ -333,6 +333,7 @@ func (c *PackageFile) Files() []FileInfo {
 	times := c.GetInts(1, 1034)
 	owners := c.GetStrings(1, 1039)
 	groups := c.GetStrings(1, 1040)
+	digests := c.GetStrings(1, 1035)
 
 	c.files = make([]FileInfo, len(names))
 	for i := 0; i < len(names); i++ {
@@ -343,6 +344,7 @@ func (c *PackageFile) Files() []FileInfo {
 			modTime: time.Unix(times[i], 0),
 			owner:   owners[i],
 			group:   groups[i],
+			digest:  digests[i],
 		}
 	}
 
