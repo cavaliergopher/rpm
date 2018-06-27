@@ -10,14 +10,15 @@ import (
 //
 // FileInfo implements the os.FileInfo interface.
 type FileInfo struct {
-	name    string
-	size    int64
-	mode    os.FileMode
-	modTime time.Time
-	isDir   bool
-	owner   string
-	group   string
-	digest  string
+	name     string
+	size     int64
+	mode     os.FileMode
+	modTime  time.Time
+	isDir    bool
+	owner    string
+	group    string
+	digest   string
+	linkname string
 }
 
 // compile-time check that rpm.FileInfo implements os.FileInfo interface
@@ -65,6 +66,11 @@ func (f *FileInfo) Group() string {
 // Digest is the md5sum of a file in a RPM package
 func (f *FileInfo) Digest() string {
 	return f.digest
+}
+
+// Linkname is the link target of a link file in a RPM package
+func (f *FileInfo) Linkname() string {
+	return f.linkname
 }
 
 // Sys is required to implement os.FileInfo and always returns nil

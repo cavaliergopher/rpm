@@ -138,6 +138,8 @@ func TestPackageFiles(t *testing.T) {
 		"", // digests field only populated for regular files
 		"03a55cfbbbfcdfc75fed8aeca5383fef12de4f019d5ff15c58f1e6581465007e",
 	}
+	// the test RPM has no links
+	linknames := []string{"", "", "", "", "", "", ""}
 
 	path := "./testdata/epel-release-7-5.noarch.rpm"
 
@@ -180,6 +182,10 @@ func TestPackageFiles(t *testing.T) {
 
 		if digest := fi.Digest(); digest != digests[i] {
 			t.Errorf("expected digest %v but got %v for %v", digests[i], digest, name)
+		}
+
+		if linkname := fi.Linkname(); linkname != linknames[i] {
+			t.Errorf("expected linkname %v but got %v for %v", linknames[i], linkname, name)
 		}
 	}
 }
