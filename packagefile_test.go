@@ -129,6 +129,17 @@ func TestPackageFiles(t *testing.T) {
 		time.Unix(1416932778, 0),
 		time.Unix(1416932629, 0),
 	}
+	digests := []string{
+		"028b9accc59bab1d21f2f3f544df5469910581e728a64fd8c411a725a82300c2",
+		"d9662befdbfb661b20b3af4a7feb34c6f58b4dc689bbeb0f29c73438015701b9",
+		"87d225d205a6263509508ac5cd4ca1bf1dc3e87960c9d305b3eb6c560f270297",
+		"6a43fe82450861a67ab673151972515069fe7fab44679f60345c826ac37e3e08",
+		"3de82a16cbc9eba0aa7c7edd7ef5e326a081afc8325aaf21ad11a68698b6b1d0",
+		"", // digests field only populated for regular files
+		"03a55cfbbbfcdfc75fed8aeca5383fef12de4f019d5ff15c58f1e6581465007e",
+	}
+	// the test RPM has no links
+	linknames := []string{"", "", "", "", "", "", ""}
 
 	path := "./testdata/epel-release-7-5.noarch.rpm"
 
@@ -167,6 +178,14 @@ func TestPackageFiles(t *testing.T) {
 
 		if modtime := fi.ModTime(); modtime != modtimes[i] {
 			t.Errorf("expected modtime %v but got %v for %v", modtimes[i], modtime.Unix(), name)
+		}
+
+		if digest := fi.Digest(); digest != digests[i] {
+			t.Errorf("expected digest %v but got %v for %v", digests[i], digest, name)
+		}
+
+		if linkname := fi.Linkname(); linkname != linknames[i] {
+			t.Errorf("expected linkname %v but got %v for %v", linknames[i], linkname, name)
 		}
 	}
 }

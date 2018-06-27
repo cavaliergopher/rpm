@@ -333,16 +333,20 @@ func (c *PackageFile) Files() []FileInfo {
 	times := c.GetInts(1, 1034)
 	owners := c.GetStrings(1, 1039)
 	groups := c.GetStrings(1, 1040)
+	digests := c.GetStrings(1, 1035)
+	linknames := c.GetStrings(1, 1036)
 
 	c.files = make([]FileInfo, len(names))
 	for i := 0; i < len(names); i++ {
 		c.files[i] = FileInfo{
-			name:    dirs[ixs[i]] + names[i],
-			mode:    os.FileMode(modes[i]),
-			size:    sizes[i],
-			modTime: time.Unix(times[i], 0),
-			owner:   owners[i],
-			group:   groups[i],
+			name:     dirs[ixs[i]] + names[i],
+			mode:     os.FileMode(modes[i]),
+			size:     sizes[i],
+			modTime:  time.Unix(times[i], 0),
+			owner:    owners[i],
+			group:    groups[i],
+			digest:   digests[i],
+			linkname: linknames[i],
 		}
 	}
 
