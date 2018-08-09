@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -340,7 +341,7 @@ func (c *PackageFile) Files() []FileInfo {
 	for i := 0; i < len(names); i++ {
 		c.files[i] = FileInfo{
 			name:     dirs[ixs[i]] + names[i],
-			mode:     os.FileMode(modes[i]),
+			mode:     fileModeFromInt64(modes[i]),
 			size:     sizes[i],
 			modTime:  time.Unix(times[i], 0),
 			owner:    owners[i],
@@ -351,6 +352,51 @@ func (c *PackageFile) Files() []FileInfo {
 	}
 
 	return c.files
+}
+
+// fileModeFromInt64 converts the 16 bit value returned from a typical
+// unix/linux stat call to the bitmask that go uses to produce an os
+// neutral representation.  It is incorrect to just cast the 16 bit
+// value directly to a os.FileMode.  The result of stat is 4 bits to
+// specify the type of the object, this is a value in the range 0 to
+// 15, rather than a bitfield, 3 bits to note suid, sgid and sticky,
+// and 3 sets of 3 bits for rwx permissions for user, group and other.
+// An os.FileMode has the same 9 bits for permissions, but rather than
+// using an enum for the type it has individual bits.  As a concrete
+// example, a block device has the 1<<26 bit set (os.ModeDevice) in
+// the os.FileMode, but has type 0x6000 (syscall.S_IFBLK). A regular
+// file is represented in os.FileMode by not having any of the bits in
+// os.ModeType set (i.e. is not a directory, is not a symlink, is not
+// a named pipe...) whilst a regular file has value syscall.S_IFREG
+// (0x8000) in the mode field from stat.
+func fileModeFromInt64(mode int64) os.FileMode {
+	fm := os.FileMode(mode & 0777)
+	switch mode & syscall.S_IFMT {
+	case syscall.S_IFBLK:
+		fm |= os.ModeDevice
+	case syscall.S_IFCHR:
+		fm |= os.ModeDevice | os.ModeCharDevice
+	case syscall.S_IFDIR:
+		fm |= os.ModeDir
+	case syscall.S_IFIFO:
+		fm |= os.ModeNamedPipe
+	case syscall.S_IFLNK:
+		fm |= os.ModeSymlink
+	case syscall.S_IFREG:
+		// nothing to do
+	case syscall.S_IFSOCK:
+		fm |= os.ModeSocket
+	}
+	if mode&syscall.S_ISGID != 0 {
+		fm |= os.ModeSetgid
+	}
+	if mode&syscall.S_ISUID != 0 {
+		fm |= os.ModeSetuid
+	}
+	if mode&syscall.S_ISVTX != 0 {
+		fm |= os.ModeSticky
+	}
+	return fm
 }
 
 func (c *PackageFile) Summary() string {
