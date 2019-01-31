@@ -1,4 +1,4 @@
-package rpm
+package version
 
 import (
 	"testing"
@@ -4531,7 +4531,7 @@ func TestRpmVerCmp(t *testing.T) {
 		// compare 'version'
 		a := &TestPkg{0, test.A, ""}
 		b := &TestPkg{0, test.B, ""}
-		if r := VersionCompare(a, b); r != test.R {
+		if r := Compare(a, b); r != test.R {
 			errCount++
 			t.Errorf("Expected %s %s %s; got %s %s %s", test.A, sign(test.R), test.B, test.A, sign(r), test.B)
 		}
@@ -4539,22 +4539,22 @@ func TestRpmVerCmp(t *testing.T) {
 		// compare 'release'
 		a = &TestPkg{0, "", test.A}
 		b = &TestPkg{0, "", test.B}
-		if r := VersionCompare(a, b); r != test.R {
+		if r := Compare(a, b); r != test.R {
 			errCount++
 			t.Errorf("Expected %s %s %s; got %s %s %s", test.A, sign(test.R), test.B, test.A, sign(r), test.B)
 		}
 	}
 
 	// compare nil
-	if r := VersionCompare(nil, nil); r != 0 {
+	if r := Compare(nil, nil); r != 0 {
 		t.Errorf("Expected <nil> == <nil>; got <nil> %s <nil>", sign(r))
 	}
 
-	if r := VersionCompare(nil, &TestPkg{1, "", ""}); r != -1 {
+	if r := Compare(nil, &TestPkg{1, "", ""}); r != -1 {
 		t.Errorf("Expected <nil> < <nil>; got <nil> %s <nil>", sign(r))
 	}
 
-	if r := VersionCompare(&TestPkg{1, "", ""}, nil); r != 1 {
+	if r := Compare(&TestPkg{1, "", ""}, nil); r != 1 {
 		t.Errorf("Expected <nil> > <nil>; got <nil> %s <nil>", sign(r))
 	}
 

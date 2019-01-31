@@ -1,6 +1,10 @@
 package rpm
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/cavaliercoder/go-rpm/version"
+)
 
 // Dependency flags indicate how versions comparisons should be computed when
 // comparing versions of dependent packages.
@@ -22,7 +26,7 @@ const (
 // Dependency implements the PackageVersion interface and so may be used when
 // comparing versions with other types of packages.
 type Dependency interface {
-	PackageVersion
+	version.Interface
 
 	// DepFlag constants
 	Flags() int

@@ -182,7 +182,7 @@ func (c *PackageFile) String() string {
 // returned if the header or tag do not exist, or it the tag exists but is a
 // different type.
 func (c *PackageFile) GetBytes(header, tag int) []byte {
-	if header >= len(c.Headers) {
+	if c == nil || header >= len(c.Headers) {
 		return nil
 	}
 	return c.Headers[header].Indexes.BytesByTag(tag)
@@ -192,7 +192,7 @@ func (c *PackageFile) GetBytes(header, tag int) []byte {
 // Nil is returned if the header or tag do not exist, or if the tag exists but
 // is a different type.
 func (c *PackageFile) GetStrings(header, tag int) []string {
-	if header >= len(c.Headers) {
+	if c == nil || header >= len(c.Headers) {
 		return nil
 	}
 	return c.Headers[header].Indexes.StringsByTag(tag)
@@ -202,7 +202,7 @@ func (c *PackageFile) GetStrings(header, tag int) []string {
 // is returned if the header or tag do not exist, or if the tag exists but is a
 // different type.
 func (c *PackageFile) GetString(header, tag int) string {
-	if header >= len(c.Headers) {
+	if c == nil || header >= len(c.Headers) {
 		return ""
 	}
 	return c.Headers[header].Indexes.StringByTag(tag)
@@ -212,7 +212,7 @@ func (c *PackageFile) GetString(header, tag int) string {
 // returned if the header or tag do not exist, or if the tag exists but is a
 // different type.
 func (c *PackageFile) GetInts(header, tag int) []int64 {
-	if header >= len(c.Headers) {
+	if c == nil || header >= len(c.Headers) {
 		return nil
 	}
 	return c.Headers[header].Indexes.IntsByTag(tag)
@@ -222,7 +222,7 @@ func (c *PackageFile) GetInts(header, tag int) []int64 {
 // returned if the header or tag do not exist, or if the tag exists but is a
 // different type.
 func (c *PackageFile) GetInt(header, tag int) int64 {
-	if header >= len(c.Headers) {
+	if c == nil || header >= len(c.Headers) {
 		return 0
 	}
 	return c.Headers[header].Indexes.IntByTag(tag)

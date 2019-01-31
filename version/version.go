@@ -1,4 +1,9 @@
-package rpm
+/*
+Package version provides functions for comparing RPM package versions.
+This implementation is tested for correctness by passing the same inputs to the
+original implementation.
+*/
+package version
 
 import (
 	"math"
@@ -11,16 +16,16 @@ import (
 // characters or alphanumeric characters.
 var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)|(~)")
 
-// PackageVersion is an interface which holds version information for a single
+// Interface is an interface which holds version information for a single
 // package.
-type PackageVersion interface {
+type Interface interface {
 	Name() string
 	Epoch() int
 	Version() string
 	Release() string
 }
 
-// VersionCompare compares the version details of two packages. Versions are
+// Compare compares the version details of two packages. Versions are
 // compared by Epoch, Version and Release in descending order of precedence.
 //
 // If a is more recent than b, 1 is returned. If a is less recent than b, -1 is
@@ -28,7 +33,7 @@ type PackageVersion interface {
 //
 // This function does not consider if the two packages have the same name or if
 // either package has been made obsolete by the other.
-func VersionCompare(a PackageVersion, b PackageVersion) int {
+func Compare(a, b Interface) int {
 	// compare nils
 	if a == nil && b == nil {
 		return 0
