@@ -14,7 +14,6 @@ type FileInfo struct {
 	size     int64
 	mode     os.FileMode
 	modTime  time.Time
-	isDir    bool
 	owner    string
 	group    string
 	digest   string
@@ -50,7 +49,7 @@ func (f *FileInfo) ModTime() time.Time {
 
 // IsDir returns true if a file is a directory in a RPM package
 func (f *FileInfo) IsDir() bool {
-	return f.isDir
+	return (os.ModeDir & f.mode) != 0
 }
 
 // Owner is the name of the owner of a file in a RPM package
