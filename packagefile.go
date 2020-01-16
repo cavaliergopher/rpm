@@ -319,6 +319,22 @@ func (c *PackageFile) Obsoletes() []Dependency {
 	return c.dependencies(5043, 1114, 1090, 1115)
 }
 
+func (c *PackageFile) Suggests() []Dependency {
+	return c.dependencies(5059, 5051, 5049, 5050)
+}
+
+func (c *PackageFile) Enhances() []Dependency {
+	return c.dependencies(5061, 5057, 5055, 5056)
+}
+
+func (c *PackageFile) Recommends() []Dependency {
+	return c.dependencies(5058, 5048, 5046, 5047)
+}
+
+func (c *PackageFile) Supplements() []Dependency {
+	return c.dependencies(5060, 5051, 5052, 5053)
+}
+
 // Files returns file information for each file that is installed by this RPM
 // package.
 func (c *PackageFile) Files() []FileInfo {
