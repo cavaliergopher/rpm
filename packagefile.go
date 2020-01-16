@@ -332,6 +332,7 @@ func (c *PackageFile) Files() []FileInfo {
 	modes := c.GetInts(1, 1030)
 	sizes := c.GetInts(1, 1028)
 	times := c.GetInts(1, 1034)
+	flags := c.GetInts(1, 1037)
 	owners := c.GetStrings(1, 1039)
 	groups := c.GetStrings(1, 1040)
 	digests := c.GetStrings(1, 1035)
@@ -344,6 +345,7 @@ func (c *PackageFile) Files() []FileInfo {
 			mode:     fileModeFromInt64(modes[i]),
 			size:     sizes[i],
 			modTime:  time.Unix(times[i], 0),
+			flags:    flags[i],
 			owner:    owners[i],
 			group:    groups[i],
 			digest:   digests[i],
