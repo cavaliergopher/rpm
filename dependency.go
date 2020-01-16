@@ -15,6 +15,12 @@ const (
 	DepFlagEqual          = (1 << 3)
 	DepFlagLesserOrEqual  = (DepFlagEqual | DepFlagLesser)
 	DepFlagGreaterOrEqual = (DepFlagEqual | DepFlagGreater)
+	DepFlagPrereq         = (1 << 6)
+	DepFlagScriptPre      = (1 << 9)
+	DepFlagScriptPost     = (1 << 10)
+	DepFlagScriptPreUn    = (1 << 11)
+	DepFlagScriptPostUn   = (1 << 12)
+	DepFlagRpmlib         = (1 << 24)
 )
 
 // See: https://github.com/rpm-software-management/rpm/blob/master/lib/rpmds.h#L25
