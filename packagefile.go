@@ -319,6 +319,22 @@ func (c *PackageFile) Obsoletes() []Dependency {
 	return c.dependencies(5043, 1114, 1090, 1115)
 }
 
+func (c *PackageFile) Suggests() []Dependency {
+	return c.dependencies(5059, 5051, 5049, 5050)
+}
+
+func (c *PackageFile) Enhances() []Dependency {
+	return c.dependencies(5061, 5057, 5055, 5056)
+}
+
+func (c *PackageFile) Recommends() []Dependency {
+	return c.dependencies(5058, 5048, 5046, 5047)
+}
+
+func (c *PackageFile) Supplements() []Dependency {
+	return c.dependencies(5060, 5051, 5052, 5053)
+}
+
 // Files returns file information for each file that is installed by this RPM
 // package.
 func (c *PackageFile) Files() []FileInfo {
@@ -332,6 +348,7 @@ func (c *PackageFile) Files() []FileInfo {
 	modes := c.GetInts(1, 1030)
 	sizes := c.GetInts(1, 1028)
 	times := c.GetInts(1, 1034)
+	flags := c.GetInts(1, 1037)
 	owners := c.GetStrings(1, 1039)
 	groups := c.GetStrings(1, 1040)
 	digests := c.GetStrings(1, 1035)
@@ -344,6 +361,7 @@ func (c *PackageFile) Files() []FileInfo {
 			mode:     fileModeFromInt64(modes[i]),
 			size:     sizes[i],
 			modTime:  time.Unix(times[i], 0),
+			flags:    flags[i],
 			owner:    owners[i],
 			group:    groups[i],
 			digest:   digests[i],
