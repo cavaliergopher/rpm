@@ -1,226 +1,187 @@
 package rpm
 
 import (
-	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
+	"io/ioutil"
 )
 
-// A Header stores metadata about a rpm package.
+const r_MaxHeaderSize = 33554432
+
+// A Header stores metadata about an rpm package.
 type Header struct {
-	Version    int
-	IndexCount int
-	Length     int
-	Indexes    IndexEntries
+	Version int
+	Tags    map[int]*Tag
 }
 
-const (
-	r_MaxHeaderSize      = 33554432
-	r_HeaderHeaderLength = 16
-	r_IndexHeaderLength  = 16
-)
-
-var (
-	// ErrBadHeaderLength indicates that the read header section is not the
-	// expected length.
-	ErrBadHeaderLength = errors.New("RPM header section is incorrect length")
-
-	// ErrNotHeader indicates that the read header section does start with the
-	// expected descriptor.
-	ErrNotHeader = errors.New("invalid RPM header descriptor")
-
-	// ErrBadIndexCount indicates that number of indexes given in the read
-	// header would exceed the actual size of the header.
-	ErrBadIndexCount = errors.New("index count exceeds header size")
-
-	// ErrIndexOutOfRange indicates that the read header index would exceed the
-	// range of the header.
-	ErrIndexOutOfRange = errors.New("index is out of range")
-
-	// ErrBadIndexType indicates that the read index contains a value of an
-	// unsupported data type.
-	ErrBadIndexType = errors.New("unknown index data type")
-
-	// ErrBadIndexValueCount indicates that the read index value would exceed
-	// the range of the header store section.
-	ErrBadIndexValueCount = errors.New("index value count is out of range")
-)
-
-// ReadPackageHeader reads an RPM package file header structure from the given
-// io.Reader.
+// GetTag returns the tag with the given identified.
 //
-// This function should only be used if you intend to read a package header
-// structure in isolation.
-func ReadPackageHeader(r io.Reader) (*Header, error) {
-	buf := make([]byte, r_HeaderHeaderLength)
-	_, err := io.ReadFull(r, buf)
-	if err != nil {
+// Nil is returned If the header is nil or the given tag does not exist.
+func (c *Header) GetTag(id int) *Tag {
+	if c == nil || len(c.Tags) == 0 {
+		return nil
+	}
+	return c.Tags[id]
+}
+
+type rpmHeader [16]byte
+
+func (b rpmHeader) Magic() []byte   { return b[:3] }
+func (b rpmHeader) Version() int    { return int(b[3]) }
+func (b rpmHeader) IndexCount() int { return int(binary.BigEndian.Uint32(b[8:12])) }
+func (b rpmHeader) Size() int       { return int(binary.BigEndian.Uint32(b[12:16])) }
+
+type rpmIndex [16]byte
+
+func (b rpmIndex) Tag() int        { return int(binary.BigEndian.Uint32(b[:4])) }
+func (b rpmIndex) Type() TagType   { return TagType(binary.BigEndian.Uint32(b[4:8])) }
+func (b rpmIndex) Offset() int     { return int(binary.BigEndian.Uint32(b[8:12])) }
+func (b rpmIndex) ValueCount() int { return int(binary.BigEndian.Uint32(b[12:16])) }
+
+// readHeader reads an RPM package file header structure from r.
+func readHeader(r io.Reader, pad bool) (*Header, error) {
+	// decode the header structure header
+	var hdrBytes rpmHeader
+	if _, err := r.Read(hdrBytes[:]); err != nil {
 		return nil, err
 	}
-	if 0 != bytes.Compare(buf[:3], []byte{0x8E, 0xAD, 0xE8}) {
-		return nil, ErrNotHeader
+	if hdrBytes.Size() > r_MaxHeaderSize {
+		return nil, errorf(
+			"header size exceeds the maximum of %d: %d",
+			r_MaxHeaderSize,
+			hdrBytes.Size(),
+		)
 	}
-	h := &Header{
-		Version:    int(buf[3]),
-		IndexCount: int(binary.BigEndian.Uint32(buf[8:12])),
-		Length:     int(binary.BigEndian.Uint32(buf[12:16])),
-	}
-	if h.Length > r_MaxHeaderSize {
-		return nil, ErrBadHeaderLength
-	}
-	if h.IndexCount*r_IndexHeaderLength > r_MaxHeaderSize {
-		return nil, ErrBadIndexCount
+	if hdrBytes.IndexCount()*len(hdrBytes) > r_MaxHeaderSize {
+		return nil, errorf(
+			"header index size exceeds the maximum of %d: %d",
+			r_MaxHeaderSize,
+			hdrBytes.Size(),
+		)
 	}
 
-	// read indexes
-	h.Indexes = make(IndexEntries, h.IndexCount)
-	indexLength := r_IndexHeaderLength * h.IndexCount
-	buf = make([]byte, indexLength)
-	_, err = io.ReadFull(r, buf)
-	if err != nil {
+	// decode the index
+	indexBytes := make([]rpmIndex, hdrBytes.IndexCount())
+	for i := 0; i < len(indexBytes); i++ {
+		if _, err := r.Read(indexBytes[i][:]); err != nil {
+			return nil, err
+		}
+		if indexBytes[i].Offset() >= hdrBytes.Size() {
+			return nil, errorf(
+				"offset of index %d is out of range: %s",
+				i,
+				indexBytes[i].Offset(),
+			)
+		}
+	}
+
+	// decode the store
+	tags := make(map[int]*Tag, len(indexBytes))
+	buf := make([]byte, hdrBytes.Size())
+	if _, err := io.ReadFull(r, buf); err != nil {
 		return nil, err
 	}
-	for x := 0; x < h.IndexCount; x++ {
-		ib := buf[r_IndexHeaderLength*x:]
-		h.Indexes[x] = IndexEntry{
-			Tag:       int(binary.BigEndian.Uint32(ib[:4])),
-			Type:      int(binary.BigEndian.Uint32(ib[4:8])),
-			Offset:    int(binary.BigEndian.Uint32(ib[8:12])),
-			ItemCount: int(binary.BigEndian.Uint32(ib[12:16])),
+	for i, ix := range indexBytes {
+		if ix.ValueCount() < 1 {
+			return nil, errorf("invalid value count for index %d: %d", i, ix.ValueCount())
 		}
-		if h.Indexes[x].Offset >= h.Length {
-			return nil, ErrIndexOutOfRange
-		}
-	}
-
-	// read the "store"
-	buf = make([]byte, h.Length)
-	_, err = io.ReadFull(r, buf)
-	if err != nil {
-		return nil, err
-	}
-
-	// parse the value of each index from the store
-	for x := 0; x < h.IndexCount; x++ {
-		index := h.Indexes[x]
-		o := index.Offset
-		if index.ItemCount == 0 {
-			return nil, ErrBadIndexValueCount
-		}
-
-		switch index.Type {
-		case IndexDataTypeChar:
-			vals := make([]uint8, index.ItemCount)
-			for v := 0; v < index.ItemCount; v++ {
-				if o >= len(buf) {
-					return nil, fmt.Errorf("uint8 value for index %d is out of range", x+1)
+		o := ix.Offset()
+		var v interface{}
+		switch ix.Type() {
+		case TagTypeBinary, TagTypeChar, TagTypeInt8:
+			if o+ix.ValueCount() > len(buf) {
+				switch ix.Type() {
+				case TagTypeBinary:
+					return nil, errorf("binary value for index %d is out of range", i+1)
+				case TagTypeChar:
+					return nil, errorf("uint8 value for index %d is out of range", i+1)
+				case TagTypeInt8:
+					return nil, errorf("int8 value for index %d is out of range", i+1)
 				}
-
-				vals[v] = uint8(buf[o])
-				o++
+				return nil, errorf("value for index %d is out of range", i+1)
 			}
+			a := make([]byte, ix.ValueCount())
+			copy(a, buf[o:o+ix.ValueCount()])
+			v = a
 
-			index.Value = vals
-
-		case IndexDataTypeInt8:
-			vals := make([]int8, index.ItemCount)
-			for v := 0; v < index.ItemCount; v++ {
-				if o >= len(buf) {
-					return nil, fmt.Errorf("int8 value for index %d is out of range", x+1)
-				}
-
-				vals[v] = int8(buf[o])
-				o++
-			}
-
-			index.Value = vals
-
-		case IndexDataTypeInt16:
-			vals := make([]int16, index.ItemCount)
-			for v := 0; v < index.ItemCount; v++ {
+		case TagTypeInt16:
+			a := make([]int64, ix.ValueCount())
+			for v := 0; v < ix.ValueCount(); v++ {
 				if o+2 > len(buf) {
-					return nil, fmt.Errorf("int16 value for index %d is out of range", x+1)
+					return nil, errorf("int16 value for index %d is out of range", i+1)
 				}
-
-				vals[v] = int16(binary.BigEndian.Uint16(buf[o : o+2]))
+				a[v] = int64(binary.BigEndian.Uint16(buf[o : o+2]))
 				o += 2
 			}
+			v = a
 
-			index.Value = vals
-
-		case IndexDataTypeInt32:
-			vals := make([]int32, index.ItemCount)
-			for v := 0; v < index.ItemCount; v++ {
+		case TagTypeInt32:
+			a := make([]int64, ix.ValueCount())
+			for v := 0; v < ix.ValueCount(); v++ {
 				if o+4 > len(buf) {
-					return nil, fmt.Errorf("int32 value for index %d is out of range", x+1)
+					return nil, errorf("int32 value for index %d is out of range", i+1)
 				}
-
-				vals[v] = int32(binary.BigEndian.Uint32(buf[o : o+4]))
+				a[v] = int64(binary.BigEndian.Uint32(buf[o : o+4]))
 				o += 4
 			}
 
-			index.Value = vals
+			v = a
 
-		case IndexDataTypeInt64:
-			vals := make([]int64, index.ItemCount)
-			for v := 0; v < index.ItemCount; v++ {
+		case TagTypeInt64:
+			a := make([]int64, ix.ValueCount())
+			for v := 0; v < ix.ValueCount(); v++ {
 				if o+8 > len(buf) {
-					return nil, fmt.Errorf("int64 value for index %d is out of range", x+1)
+					// TODO: better errors
+					return nil, errorf("int64 value for index %d is out of range", i+1)
 				}
-
-				vals[v] = int64(binary.BigEndian.Uint64(buf[o : o+8]))
+				a[v] = int64(binary.BigEndian.Uint64(buf[o : o+8]))
 				o += 8
 			}
+			v = a
 
-			index.Value = vals
-
-		case IndexDataTypeBinary:
-			if o+index.ItemCount > len(buf) {
-				return nil, fmt.Errorf("[]byte value for index %d is out of range", x+1)
-			}
-
-			b := make([]byte, index.ItemCount)
-			copy(b, buf[o:o+index.ItemCount])
-
-			index.Value = b
-
-		case IndexDataTypeString, IndexDataTypeStringArray, IndexDataTypeI8NString:
+		case TagTypeString, TagTypeStringArray, TagTypeI18NString:
 			// allow at least one byte per string
-			if o+index.ItemCount > len(buf) {
-				return nil, fmt.Errorf("[]string value for index %d is out of range", x+1)
+			if o+ix.ValueCount() > len(buf) {
+				return nil, errorf("[]string value for index %d is out of range", i+1)
 			}
-
-			vals := make([]string, index.ItemCount)
-
-			for s := 0; s < index.ItemCount; s++ {
+			a := make([]string, ix.ValueCount())
+			for s := 0; s < ix.ValueCount(); s++ {
 				// calculate string length
 				var j int
 				for j = 0; (o+j) < len(buf) && buf[o+j] != 0; j++ {
 				}
-
 				if j == len(buf) {
-					return nil, fmt.Errorf("string value for index %d is out of range", x+1)
+					return nil, errorf("string value for index %d is out of range", i+1)
 				}
-
-				vals[s] = string(buf[o : o+j])
+				a[s] = string(buf[o : o+j])
 				o += j + 1
 			}
+			v = a
 
-			index.Value = vals
-
-		case IndexDataTypeNull:
-		// nothing to do here
+		case TagTypeNull:
+			// nothing to do here
 
 		default:
 			// unknown data type
-			return nil, ErrBadIndexType
+			return nil, errorf("unknown index data type: %0X", ix.Type())
 		}
-
-		// save in array
-		h.Indexes[x] = index
+		tags[ix.Tag()] = &Tag{
+			ID:    ix.Tag(),
+			Type:  ix.Type(),
+			Value: v,
+		}
 	}
 
-	return h, nil
+	// pad to next header
+	padding := int64(8-(hdrBytes.Size()%8)) % 8
+	if pad && padding != 0 {
+		if _, err := io.CopyN(ioutil.Discard, r, padding); err != nil {
+			return nil, err
+		}
+	}
+
+	return &Header{
+		Version: hdrBytes.Version(),
+		Tags:    tags,
+	}, nil
 }

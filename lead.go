@@ -3,12 +3,14 @@ package rpm
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 )
 
-// A Lead is the deprecated lead section of an RPM file which is used in legacy
-// RPM versions to store package metadata.
+// ErrNotRPMFile indicates that the file is not an rpm package.
+var ErrNotRPMFile = errorf("invalid file descriptor")
+
+// A Lead is the deprecated lead section of an rpm file which is used in legacy
+// rpm versions to store package metadata.
 type Lead struct {
 	VersionMajor    int
 	VersionMinor    int
@@ -19,48 +21,39 @@ type Lead struct {
 	SignatureType   int
 }
 
-const (
-	r_LeadLength = 96
-)
+type leadBytes [96]byte
 
-var (
-	// ErrNotRPMFile indicates that the read file does not start with the
-	// expected descriptor.
-	ErrNotRPMFile = fmt.Errorf("RPM file descriptor is invalid")
+func (c leadBytes) Magic() []byte        { return c[:4] }
+func (c leadBytes) VersionMajor() int    { return int(c[4]) }
+func (c leadBytes) VersionMinor() int    { return int(c[5]) }
+func (c leadBytes) Type() int            { return int(binary.BigEndian.Uint16(c[6:8])) }
+func (c leadBytes) Architecture() int    { return int(binary.BigEndian.Uint16(c[8:10])) }
+func (c leadBytes) Name() string         { return string(c[10:76]) }
+func (c leadBytes) OperatingSystem() int { return int(binary.BigEndian.Uint16(c[76:78])) }
+func (c leadBytes) SignatureType() int   { return int(binary.BigEndian.Uint16(c[78:80])) }
 
-	// ErrUnsupportedVersion indicates that the read lead section version is not
-	// currently supported.
-	ErrUnsupportedVersion = fmt.Errorf("unsupported RPM package version")
-)
-
-// ReadPackageLead reads the deprecated lead section of an RPM file which is
-// used in legacy RPM versions to store package metadata.
-//
-// This function should only be used if you intend to read a package lead in
-// isolation.
-func ReadPackageLead(r io.Reader) (*Lead, error) {
-	var buf [r_LeadLength]byte
-	_, err := io.ReadFull(r, buf[:])
+// readLead reads the deprecated lead section of an rpm package which is used in
+// legacy rpm versions to store package metadata.
+func readLead(r io.Reader) (*Lead, error) {
+	var lead leadBytes
+	_, err := io.ReadFull(r, lead[:])
 	if err != nil {
 		return nil, err
 	}
-	if 0 != bytes.Compare(buf[:4], []byte{0xED, 0xAB, 0xEE, 0xDB}) {
+	if !bytes.Equal(lead.Magic(), []byte{0xED, 0xAB, 0xEE, 0xDB}) {
 		return nil, ErrNotRPMFile
 	}
-	lead := &Lead{
-		VersionMajor:    int(buf[4]),
-		VersionMinor:    int(buf[5]),
-		Type:            int(binary.BigEndian.Uint16(buf[6:8])),
-		Architecture:    int(binary.BigEndian.Uint16(buf[8:10])),
-		Name:            string(buf[10:76]),
-		OperatingSystem: int(binary.BigEndian.Uint16(buf[76:78])),
-		SignatureType:   int(binary.BigEndian.Uint16(buf[78:80])),
+	if lead.VersionMajor() < 3 || lead.VersionMajor() > 4 {
+		return nil, errorf("unsupported rpm version: %d", lead.VersionMajor())
 	}
-	if lead.VersionMajor < 3 || lead.VersionMajor > 4 {
-		return nil, ErrUnsupportedVersion
-	}
-
 	// TODO: validate lead value ranges
-
-	return lead, nil
+	return &Lead{
+		VersionMajor:    lead.VersionMajor(),
+		VersionMinor:    lead.VersionMinor(),
+		Type:            lead.Type(),
+		Architecture:    lead.Architecture(),
+		Name:            lead.Name(),
+		OperatingSystem: lead.OperatingSystem(),
+		SignatureType:   lead.SignatureType(),
+	}, nil
 }

@@ -2,8 +2,10 @@ package rpm
 
 import (
 	"bytes"
+	"fmt"
 	"hash/crc32"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,48 +13,60 @@ import (
 	"time"
 )
 
-var testFiles map[string][]byte
-
 func getTestFiles() map[string][]byte {
-	if testFiles != nil {
-		return testFiles
-	}
-
-	// get a directory full of rpms from RPM_DIR environment variable or
-	// failback to ./testdata
 	path := os.Getenv("RPM_DIR")
 	if path == "" {
-		path = "testdata"
+		path = "./testdata"
 	}
-
-	// list RPM files
 	dir, err := ioutil.ReadDir(path)
 	if err != nil {
 		panic(err)
 	}
-
 	files := make([]string, 0)
 	for _, f := range dir {
 		if strings.HasSuffix(f.Name(), ".rpm") {
 			files = append(files, filepath.Join(path, f.Name()))
 		}
 	}
-
 	if len(files) == 0 {
 		panic("No rpm packages found for testing")
 	}
-
-	testFiles = make(map[string][]byte, len(files))
+	testFiles := make(map[string][]byte, len(files))
 	for _, filename := range files {
 		b, err := ioutil.ReadFile(filename)
 		if err != nil {
 			panic(err)
 		}
-
 		testFiles[filename] = b
 	}
-
 	return testFiles
+}
+
+func openPackage(name string) *Package {
+	p, err := Open(name)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func openPackages(path string) []*Package {
+	dir, err := ioutil.ReadDir(path)
+	if err != nil {
+		panic(err)
+	}
+	files := make([]string, 0)
+	for _, f := range dir {
+		if strings.HasSuffix(f.Name(), ".rpm") {
+			files = append(files, filepath.Join(path, f.Name()))
+		}
+	}
+	packages := make([]*Package, len(files))
+	for i, f := range files {
+		p := openPackage(f)
+		packages[i] = p
+	}
+	return packages
 }
 
 func TestReadRPMFile(t *testing.T) {
@@ -62,48 +76,16 @@ func TestReadRPMFile(t *testing.T) {
 	valid := 0
 	for path, b := range files {
 		// Load package info
-		rpm, err := ReadPackageFile(bytes.NewReader(b))
+		rpm, err := Read(bytes.NewReader(b))
 		if err != nil {
-			t.Errorf("Error loading RPM file %s: %s", path, err)
+			t.Errorf("Error loading rpm file %s: %s", path, err)
 		} else {
 			t.Logf("Loaded package: %v", rpm)
 			valid++
 		}
 	}
 
-	t.Logf("Validated %d RPM files", valid)
-}
-
-func TestReadRPMDirectory(t *testing.T) {
-	expected := 10
-	packages, err := OpenPackageFiles("./testdata")
-	if err != nil {
-		t.Fatalf("Error reading RPMs in directory: %v", err)
-	}
-
-	// count packages
-	if len(packages) != expected {
-		t.Errorf("Expected %d packages in directory; got %d", expected, len(packages))
-	}
-}
-
-func TestChecksum(t *testing.T) {
-	path := "./testdata/epel-release-7-5.noarch.rpm"
-	expected := "d6f332ed157de1d42058ec785b392a1cc4b5836c27830af8fbf083cce29ef0ab"
-
-	p, err := OpenPackageFile(path)
-	if err != nil {
-		t.Fatalf("Error opening %s: %v", path, err)
-	}
-
-	sum, err := p.Checksum()
-	if err != nil {
-		t.Errorf("Error validating checksum for %s: %v", path, err)
-	} else {
-		if sum != expected {
-			t.Errorf("Expected sum %s for %s; got %s", expected, path, sum)
-		}
-	}
+	t.Logf("Validated %d rpm files", valid)
 }
 
 func TestPackageFiles(t *testing.T) {
@@ -140,50 +122,36 @@ func TestPackageFiles(t *testing.T) {
 	}
 	// the test RPM has no links
 	linknames := []string{"", "", "", "", "", "", ""}
-
 	path := "./testdata/epel-release-7-5.noarch.rpm"
-
-	p, err := OpenPackageFile(path)
-	if err != nil {
-		t.Fatalf("Error opening %s: %v", path, err)
-	}
-
+	p := openPackage(path)
 	files := p.Files()
 	if len(files) != len(names) {
-		t.Fatalf("expected %v files in RPM package but got %v", len(names), len(files))
+		t.Fatalf("expected %v files in rpm package but got %v", len(names), len(files))
 	}
-
 	for i, fi := range files {
 		name := fi.Name()
 		if name != names[i] {
 			t.Errorf("expected file %v with name %v but got %v", i, names[i], name)
 			continue
 		}
-
 		if mode := int64(fi.Mode().Perm()); mode != modes[i] {
 			t.Errorf("expected mode %v but got %v for %v", modes[i], mode, name)
 		}
-
 		if size := fi.Size(); size != sizes[i] {
 			t.Errorf("expected size %v but got %v for %v", sizes[i], size, name)
 		}
-
 		if owner := fi.Owner(); owner != owners[i] {
 			t.Errorf("expected owner %v but got %v for %v", owners[i], owner, name)
 		}
-
 		if group := fi.Group(); group != groups[i] {
 			t.Errorf("expected group %v but got %v for %v", groups[i], group, name)
 		}
-
 		if modtime := fi.ModTime(); modtime != modtimes[i] {
 			t.Errorf("expected modtime %v but got %v for %v", modtimes[i], modtime.Unix(), name)
 		}
-
 		if digest := fi.Digest(); digest != digests[i] {
 			t.Errorf("expected digest %v but got %v for %v", digests[i], digest, name)
 		}
-
 		if linkname := fi.Linkname(); linkname != linknames[i] {
 			t.Errorf("expected linkname %v but got %v for %v", linknames[i], linkname, name)
 		}
@@ -213,32 +181,41 @@ func TestByteTags(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		p, err := OpenPackageFile(test.Path)
-		if err != nil {
-			t.Errorf("error opening %v: %v", test.Path, err)
-			continue
-		}
-
+		p := openPackage(test.Path)
 		if crc := crc32.ChecksumIEEE(p.GPGSignature()); crc != test.GPGSignatureCRC {
 			t.Errorf("expected GPG Signature CRC %v, got %v for %v", test.GPGSignatureCRC, crc, test.Path)
 		}
 	}
 }
 
-func BenchmarkPackageOpens(b *testing.B) {
-	files := getTestFiles()
-	// parse packages from byte arrays b.N times
-	var V interface{}
-	for n := 0; n < b.N; n++ {
-		for _, b := range files {
-			p, err := ReadPackageFile(bytes.NewReader(b))
-			if err != nil {
-				panic(err)
-			}
-
-			V = p
-		}
-
-		X = V
+// Lists all the files in an rpm package.
+func ExamplePackage_Files() {
+	// open a package file
+	pkg, err := Open("./testdata/epel-release-7-5.noarch.rpm")
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	// list each file
+	files := pkg.Files()
+	fmt.Printf("total %v\n", len(files))
+	for _, fi := range files {
+		fmt.Printf("%v %v %v %5v %v %v\n",
+			fi.Mode().Perm(),
+			fi.Owner(),
+			fi.Group(),
+			fi.Size(),
+			fi.ModTime().UTC().Format("Jan 02 15:04"),
+			fi.Name())
+	}
+
+	// Output:
+	// total 7
+	// -rw-r--r-- root root  1662 Nov 25 16:23 /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+	// -rw-r--r-- root root  1056 Nov 25 16:23 /etc/yum.repos.d/epel-testing.repo
+	// -rw-r--r-- root root   957 Nov 25 16:23 /etc/yum.repos.d/epel.repo
+	// -rw-r--r-- root root    41 Nov 25 16:23 /usr/lib/rpm/macros.d/macros.epel
+	// -rw-r--r-- root root  2813 Nov 25 16:23 /usr/lib/systemd/system-preset/90-epel.preset
+	// -rwxr-xr-x root root  4096 Nov 25 16:26 /usr/share/doc/epel-release-7
+	// -rw-r--r-- root root 18385 Nov 25 16:23 /usr/share/doc/epel-release-7/GPL
 }

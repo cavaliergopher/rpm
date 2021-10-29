@@ -1,19 +1,24 @@
 /*
-Package rpm provides a native implementation of the RPM file specification.
+Package rpm provides an implementation the rpm package file format.
+
+Methods for comparing package versions are provided in pkg/rpmver.
+
+See: http://ftp.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
 
 	package main
 
 	import (
 		"fmt"
-		"github.com/cavaliercoder/go-rpm"
+		"log"
+
+		"github.com/cavaliergopher/rpm"
 	)
 
 	func main() {
-		p, err := rpm.OpenPackageFile("my-package.rpm")
+		p, err := rpm.Open("my-package.rpm")
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
-
 		fmt.Printf("Loaded package: %v", p)
 	}
 

@@ -1,9 +1,5 @@
-/*
-Package version provides functions for comparing RPM package versions.
-This implementation is tested for correctness by passing the same inputs to the
-original implementation.
-*/
-package version
+// Package rpmver provides functions for comparing RPM package versions.
+package rpmver
 
 import (
 	"math"

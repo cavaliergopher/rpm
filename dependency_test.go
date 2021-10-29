@@ -29,7 +29,6 @@ func TestDependencyStrings(t *testing.T) {
 		{&dependency{DepFlagLesser, "test", 0, "1", "2"}, "test < 1.2"},
 		{&dependency{DepFlagLesser, "test", 1, "2", "3"}, "test < 2.3"},
 	}
-
 	for i, test := range tests {
 		if str := fmt.Sprintf("%v", test.dep); str != test.str {
 			t.Errorf("Expected '%s' for test %d, got: '%s'", test.str, i+1, str)

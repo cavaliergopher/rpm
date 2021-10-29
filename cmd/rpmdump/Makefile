@@ -7,7 +7,7 @@ rpmdump: $(rpmdump_SOURCES)
 	go build -x -o rpmdump $(rpmdump_SOURCES)
 
 install:
-	go install -x github.com/cavaliercoder/go-rpm/cmd/rpmdump
+	go install -x github.com/cavaliergopher/rpm/cmd/rpmdump
 
 clean:
 	go clean -x -i

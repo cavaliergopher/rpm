@@ -3,7 +3,7 @@ package rpm
 import (
 	"fmt"
 
-	"github.com/cavaliercoder/go-rpm/version"
+	"github.com/cavaliergopher/rpm/pkg/rpmver"
 )
 
 // Dependency flags indicate how versions comparisons should be computed when
@@ -29,13 +29,12 @@ const (
 // packages. It might indicate that one package requires, conflicts with,
 // obsoletes or provides another package.
 //
-// Dependency implements the PackageVersion interface and so may be used when
-// comparing versions with other types of packages.
+// Dependency implements rpmver.Interface and so may be used when comparing
+// versions with other types of packages.
 type Dependency interface {
-	version.Interface
+	rpmver.Interface
 
-	// DepFlag constants
-	Flags() int
+	Flags() int // See the DepFlag constants
 }
 
 // private basic implementation of a package dependency.
@@ -77,7 +76,6 @@ func (c *dependency) Release() string {
 // format to `rpm -qR`.
 func (c *dependency) String() string {
 	s := c.name
-
 	switch {
 	case DepFlagLesserOrEqual == (c.flags & DepFlagLesserOrEqual):
 		s = fmt.Sprintf("%s <=", s)
@@ -94,14 +92,11 @@ func (c *dependency) String() string {
 	case DepFlagEqual == (c.flags & DepFlagEqual):
 		s = fmt.Sprintf("%s =", s)
 	}
-
 	if c.version != "" {
 		s = fmt.Sprintf("%s %s", s, c.version)
 	}
-
 	if c.release != "" {
 		s = fmt.Sprintf("%s.%s", s, c.release)
 	}
-
 	return s
 }
