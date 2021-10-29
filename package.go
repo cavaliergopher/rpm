@@ -15,14 +15,10 @@ type Package struct {
 	Lead      Lead
 	Signature Header
 	Header    Header
-
-	// TODO: delete?
-	files []FileInfo // memoize .Files()
 }
 
 // Read reads an rpm package from r.
 func Read(r io.Reader) (*Package, error) {
-	// See: http://ftp.rpm.org/max-rpm/s1-rpm-file-format-rpm-file-format.html
 	lead, err := readLead(r)
 	if err != nil {
 		return nil, err
@@ -140,9 +136,6 @@ func (c *Package) Supplements() []Dependency {
 // Files returns file information for each file that is installed by this RPM
 // package.
 func (c *Package) Files() []FileInfo {
-	if c.files != nil {
-		return c.files
-	}
 	ixs := c.Header.GetTag(1116).Int64Slice()
 	names := c.Header.GetTag(1117).StringSlice()
 	dirs := c.Header.GetTag(1118).StringSlice()
@@ -154,9 +147,9 @@ func (c *Package) Files() []FileInfo {
 	groups := c.Header.GetTag(1040).StringSlice()
 	digests := c.Header.GetTag(1035).StringSlice()
 	linknames := c.Header.GetTag(1036).StringSlice()
-	c.files = make([]FileInfo, len(names))
+	a := make([]FileInfo, len(names))
 	for i := 0; i < len(names); i++ {
-		c.files[i] = FileInfo{
+		a[i] = FileInfo{
 			name:     dirs[ixs[i]] + names[i],
 			mode:     fileModeFromInt64(modes[i]),
 			size:     sizes[i],
@@ -168,7 +161,7 @@ func (c *Package) Files() []FileInfo {
 			linkname: linknames[i],
 		}
 	}
-	return c.files
+	return a
 }
 
 // fileModeFromInt64 converts the 16 bit value returned from a typical
