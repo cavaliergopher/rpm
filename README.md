@@ -1,5 +1,5 @@
 # rpm
-[![Go Reference](https://pkg.go.dev/badge/github.com/cavaliergopher/rpm.svg)](https://pkg.go.dev/github.com/cavaliergopher/rpm) [![Build Status](https://travis-ci.org/cavaliergopher/rpm.svg?branch=master)](https://travis-ci.org/cavaliergopher/rpm) [![Go Report Card](https://goreportcard.com/badge/github.com/cavaliergopher/rpm)](https://goreportcard.com/report/github.com/cavaliergopher/rpm)
+[![Go Reference](https://pkg.go.dev/badge/github.com/cavaliergopher/rpm.svg)](https://pkg.go.dev/github.com/cavaliergopher/rpm) [![Build Status](https://app.travis-ci.com/cavaliergopher/rpm.svg?branch=main)](https://app.travis-ci.com/cavaliergopher/rpm) [![Go Report Card](https://goreportcard.com/badge/github.com/cavaliergopher/rpm)](https://goreportcard.com/report/github.com/cavaliergopher/rpm)
 
 Package rpm providers readers and writers for RPM packages.
 
