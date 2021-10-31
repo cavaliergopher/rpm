@@ -28,11 +28,12 @@ const (
 // obsoletes or provides another package.
 //
 // Dependency implements the Version interface and so may be used when comparing
-// versions with other types of packages.
+// versions.
 type Dependency interface {
-	Version
+	Version // Version of the other package
 
-	Flags() int // See the DepFlag constants
+	Name() string // Name of the other package
+	Flags() int   // See the DepFlag constants
 }
 
 // private basic implementation of a package dependency.
@@ -43,6 +44,8 @@ type dependency struct {
 	version string
 	release string
 }
+
+var _ Dependency = &dependency{}
 
 // Flags determines the nature of the package relationship and the comparison
 // used for the given version constraint.
