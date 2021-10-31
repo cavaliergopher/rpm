@@ -54,6 +54,12 @@ using Header.GetTag and their tag identifier.
 Header.GetTag and all Tag methods will return a zero value if the header or the
 tag do not exist, or if the tag has a different data type.
 
+You may enumerate all tags in a header with Header.Tags:
+
+	for id, tag := range pkg.Header.Tags {
+		fmt.Println(id, tag.Type, tag.Value)
+	}
+
 Comparing versions
 
 In the rpm ecosystem, package versions are compared using EVR; epoch, version,
@@ -86,8 +92,8 @@ compressed with xz. To decompress and unarchive an rpm payload, the reader that
 read the rpm package headers will be positioned at the beginning of the payload
 and can be reused with the appropriate Go packages for the rpm payload format.
 
-You can check the archive format with Package.PayloadFormat. You can check the
-compression algorithm with Package.PayloadCompression.
+You can check the archive format with Package.PayloadFormat and the compression
+algorithm with Package.PayloadCompression.
 
 For the cpio archive format, the following package is recommended:
 

@@ -9,7 +9,7 @@ import (
 // ErrNotRPMFile indicates that the file is not an rpm package.
 var ErrNotRPMFile = errorf("invalid file descriptor")
 
-// A Lead is the deprecated lead section of an rpm file which is used in legacy
+// Lead is the deprecated lead section of an rpm file which is used in legacy
 // rpm versions to store package metadata.
 type Lead struct {
 	VersionMajor    int

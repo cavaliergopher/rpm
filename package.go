@@ -18,6 +18,8 @@ type Package struct {
 	Header    Header
 }
 
+var _ Version = &Package{}
+
 // Read reads an rpm package from r.
 //
 // When this function returns, the reader will be positioned at the start of the
@@ -81,11 +83,6 @@ func (c *Package) dependencies(nevrsTagID, flagsTagID, namesTagID, versionsTagID
 // '[name]-[version]-[release].[architecture]'.
 func (c *Package) String() string {
 	return fmt.Sprintf("%s-%s-%s.%s", c.Name(), c.Version(), c.Release(), c.Architecture())
-}
-
-// ChecksumType returns "sha256"
-func (c *Package) ChecksumType() string {
-	return "sha256"
 }
 
 func (c *Package) GPGSignature() GPGSignature {

@@ -1,4 +1,3 @@
-// Package rpmver provides functions for comparing RPM package versions.
 package rpm
 
 import (
@@ -12,7 +11,8 @@ import (
 // characters or alphanumeric characters.
 var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)|(~)")
 
-// Version is an interface which holds version information for a package.
+// Version is an interface which holds version information for a package in EVR
+// form.
 type Version interface {
 	Epoch() int
 	Version() string

@@ -14,7 +14,7 @@ type Header struct {
 	Tags    map[int]*Tag
 }
 
-// GetTag returns the tag with the given identified.
+// GetTag returns the tag with the given identifier.
 //
 // Nil is returned if the specified tag does not exist or the header is nil.
 func (c *Header) GetTag(id int) *Tag {

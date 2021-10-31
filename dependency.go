@@ -27,7 +27,7 @@ const (
 // packages. It might indicate that one package requires, conflicts with,
 // obsoletes or provides another package.
 //
-// Dependency implements rpmver.Interface and so may be used when comparing
+// Dependency implements the Version interface and so may be used when comparing
 // versions with other types of packages.
 type Dependency interface {
 	Version
