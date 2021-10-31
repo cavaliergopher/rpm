@@ -1,9 +1,2 @@
-.vagrant/
-rpms
-*.sqlite
-*.bz2
-*.gz
-*.zip
-*.yml
-*.yaml
-.fuzz/
+cmd/rpmdump/rpmdump
+cmd/rpminfo/rpminfo
