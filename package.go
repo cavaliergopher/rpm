@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -18,6 +19,10 @@ type Package struct {
 }
 
 // Read reads an rpm package from r.
+//
+// When this function returns, the reader will be positioned at the start of the
+// package payload. Use Package.PayloadFormat and Package.PayloadCompression to
+// determine how to decompress and unarchive the payload.
 func Read(r io.Reader) (*Package, error) {
 	lead, err := readLead(r)
 	if err != nil {
@@ -39,6 +44,11 @@ func Read(r io.Reader) (*Package, error) {
 }
 
 // Open opens an rpm package from the file system.
+//
+// Once the package headers are read, the underlying reader is closed and cannot
+// be used to read the package payload. To read the package payload, open the
+// package with os.Open and read the headers with Read. You may then use the
+// same reader to read the payload.
 func Open(name string) (*Package, error) {
 	f, err := os.Open(name)
 	if err != nil {
@@ -343,3 +353,30 @@ func (c *Package) PayloadFormat() string {
 func (c *Package) PayloadCompression() string {
 	return c.Header.GetTag(1125).String()
 }
+
+// Sort sorts a slice of packages lexically by name ascending and then by
+// version descending. Version is evaluated first by epoch, then by version
+// string, then by release.
+func Sort(x []*Package) { sort.Sort(PackageSlice(x)) }
+
+// PackageSlice implements sort.Interface for a slice of packages. Packages are
+// sorted lexically by name ascending and then by version descending. Version is
+// evaluated first by epoch, then by version string, then by release.
+type PackageSlice []*Package
+
+// Sort is a convenience method: x.Sort() calls sort.Sort(x).
+func (x PackageSlice) Sort() { sort.Sort(x) }
+
+func (x PackageSlice) Len() int { return len(x) }
+
+func (x PackageSlice) Less(i, j int) bool {
+	a, b := x[i].Name(), x[j].Name()
+	if a == b {
+		return Compare(x[i], x[j]) == 1
+	}
+	return a < b
+}
+
+func (x PackageSlice) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+
+var _ sort.Interface = PackageSlice{}

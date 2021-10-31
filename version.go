@@ -1,5 +1,5 @@
 // Package rpmver provides functions for comparing RPM package versions.
-package rpmver
+package rpm
 
 import (
 	"math"
@@ -12,10 +12,8 @@ import (
 // characters or alphanumeric characters.
 var alphanumPattern = regexp.MustCompile("([a-zA-Z]+)|([0-9]+)|(~)")
 
-// Interface is an interface which holds version information for a single
-// package.
-type Interface interface {
-	Name() string
+// Version is an interface which holds version information for a package.
+type Version interface {
 	Epoch() int
 	Version() string
 	Release() string
@@ -29,7 +27,7 @@ type Interface interface {
 //
 // This function does not consider if the two packages have the same name or if
 // either package has been made obsolete by the other.
-func Compare(a, b Interface) int {
+func Compare(a, b Version) int {
 	// compare nils
 	if a == nil && b == nil {
 		return 0

@@ -2,8 +2,6 @@ package rpm
 
 import (
 	"fmt"
-
-	"github.com/cavaliergopher/rpm/pkg/rpmver"
 )
 
 // Dependency flags indicate how versions comparisons should be computed when
@@ -32,7 +30,7 @@ const (
 // Dependency implements rpmver.Interface and so may be used when comparing
 // versions with other types of packages.
 type Dependency interface {
-	rpmver.Interface
+	Version
 
 	Flags() int // See the DepFlag constants
 }

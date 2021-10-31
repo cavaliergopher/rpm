@@ -1,3 +1,29 @@
+/*
+rpminfo displays package information, akin to rpm --info.
+
+	usage: rpminfo [package ...]
+
+Example:
+
+	$ rpminfo golang-1.6.3-2.el7.x86_64.rpm
+	Name        : golang
+	Version     : 1.6.3
+	Release     : 2.el7
+	Architecture: x86_64
+	Group       : Unspecified
+	Size        : 11809071
+	License     : BSD and Public Domain
+	Signature   : RSA/SHA256, Sun Nov 20 18:01:16 2016, Key ID 24c6a8a7f4a80eb5
+	Source RPM  : golang-1.6.3-2.el7.src.rpm
+	Build Date  : Tue Nov 15 12:20:30 2016
+	Build Host  : c1bm.rdu2.centos.org
+	Packager    : CentOS BuildSystem <http://bugs.centos.org>
+	Vendor      : CentOS
+	URL         : http://golang.org/
+	Summary     : The Go Programming Language
+	Description :
+	The Go Programming Language.
+*/
 package main
 
 import (

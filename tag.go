@@ -39,8 +39,8 @@ func (i TagType) String() string {
 // Tag is an rpm header entry and its associated data value. Once the data type
 // is known, use the associated value method to retrieve the tag value.
 //
-// All Tag methods will return their zero value and are safe to use if the tag
-// is nil.
+// All Tag methods will return their zero value if the underlying data type is
+// a different type or if the tag is nil.
 type Tag struct {
 	ID    int
 	Type  TagType
@@ -103,6 +103,7 @@ func (c *Tag) Int64() int64 {
 }
 
 // Bytes returns a slice of bytes or nil if the index is not a byte slice value.
+//
 // Use Bytes for all CHAR, INT8 and BIN data types.
 func (c *Tag) Bytes() []byte {
 	if c == nil || c.Value == nil {

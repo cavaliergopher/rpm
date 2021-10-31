@@ -16,7 +16,7 @@ type Header struct {
 
 // GetTag returns the tag with the given identified.
 //
-// Nil is returned If the header is nil or the given tag does not exist.
+// Nil is returned if the specified tag does not exist or the header is nil.
 func (c *Header) GetTag(id int) *Tag {
 	if c == nil || len(c.Tags) == 0 {
 		return nil

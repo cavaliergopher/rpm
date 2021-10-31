@@ -4,6 +4,7 @@
 Generate test cases for version_test.go
 """
 
+from json import dumps
 from rpm import labelCompare
 from typing import Iterable, Tuple
 
@@ -82,13 +83,13 @@ def get_test_cases(versions: Iterable[str]) -> Iterable[Tuple[str, str, int]]:
     for a in versions:
         for b in versions:
             expect = labelCompare(("0", "0", a), ("0", "0", b))
-            yield (a, b, expect)
+            yield {"a": a, b: "b", "expect": expect}
 
 
 if __name__ == "__main__":
-    print("\t// tests generated with version_test.py")
-    print("\ttests := []VerTest{")
-    test_cases = get_test_cases(VERSIONS)
-    for test_case in test_cases:
-        print(f'\t\tVerTest{{"{test_case[0]}", "{test_case[1]}", {test_case[2]}}},')
-    print("\t}")
+    print(
+        dumps(
+            list(get_test_cases(VERSIONS)),
+            separators=(",", ":"),
+        )
+    )
