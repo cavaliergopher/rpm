@@ -32,7 +32,7 @@ func sign(r int) string {
 	return "=="
 }
 
-func TestRpmVerCmp(t *testing.T) {
+func TestCompare(t *testing.T) {
 	tests := make([]*VerTest, 0)
 	f, err := os.Open("./testdata/vercmp.json")
 	if err != nil {

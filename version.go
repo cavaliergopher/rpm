@@ -20,7 +20,8 @@ type Version interface {
 }
 
 // Compare compares the version details of two packages. Versions are
-// compared by Epoch, Version and Release in descending order of precedence.
+// compared by Epoch, Version and Release (EVR) in descending order of
+// precedence.
 //
 // If a is more recent than b, 1 is returned. If a is less recent than b, -1 is
 // returned. If a and b are equal, 0 is returned.
@@ -48,20 +49,22 @@ func Compare(a, b Version) int {
 	}
 
 	// compare version
-	if rc := rpmvercmp(a.Version(), b.Version()); rc != 0 {
+	if rc := CompareVersions(a.Version(), b.Version()); rc != 0 {
 		return rc
 	}
 
 	// compare release
-	return rpmvercmp(a.Release(), b.Release())
+	return CompareVersions(a.Release(), b.Release())
 }
 
-// rpmcmpver compares two version or release strings.
+// CompareVersion compares version strings. It does not consider package epochs
+// or release numbers like Compare.
 //
-// For the original C implementation, see:
-// https://github.com/rpm-software-management/rpm/blob/master/lib/rpmvercmp.c#L16
-func rpmvercmp(a, b string) int {
-	// shortcut for equality
+// If a is more recent than b, 1 is returned. If a is less recent than b, -1 is
+// returned. If a and b are equal, 0 is returned.
+func CompareVersions(a, b string) int {
+	// For the original C implementation, see:
+	// https://github.com/rpm-software-management/rpm/blob/master/lib/rpmvercmp.c#L16
 	if a == b {
 		return 0
 	}
