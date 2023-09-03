@@ -90,7 +90,7 @@ func (c *Package) GPGSignature() GPGSignature {
 }
 
 // For tag definitions, see:
-// https://github.com/rpm-software-management/rpm/blob/master/lib/rpmtag.h#L61
+// https://github.com/rpm-software-management/rpm/blob/master/include/rpm/rpmtag.h#L34
 
 func (c *Package) Name() string {
 	return c.Header.GetTag(1000).String()
@@ -238,16 +238,24 @@ func (c *Package) InstallTime() time.Time {
 
 // Size specifies the disk space consumed by installation of the package.
 func (c *Package) Size() uint64 {
+	if i := uint64(c.Header.GetTag(5009).Int64()); i > 0 {
+		return i
+	}
 	return uint64(c.Header.GetTag(1009).Int64())
 }
 
 // ArchiveSize specifies the size of the archived payload of the package in
 // bytes.
 func (c *Package) ArchiveSize() uint64 {
+	if i := uint64(c.Signature.GetTag(271).Int64()); i > 0 {
+		return i
+	}
 	if i := uint64(c.Signature.GetTag(1007).Int64()); i > 0 {
 		return i
 	}
-
+	if i := uint64(c.Header.GetTag(271).Int64()); i > 0 {
+		return i
+	}
 	return uint64(c.Header.GetTag(1046).Int64())
 }
 
