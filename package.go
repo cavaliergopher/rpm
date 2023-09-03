@@ -108,6 +108,13 @@ func (c *Package) Epoch() int {
 	return int(c.Header.GetTag(1003).Int64())
 }
 
+// HeaderRange returns the byte offsets of the RPM header.
+func (c *Package) HeaderRange() (start, end int) {
+	start = 96 + c.Signature.Size
+	end = start + c.Header.Size
+	return start, end
+}
+
 func (c *Package) Requires() []Dependency {
 	return c.dependencies(5041, 1048, 1049, 1050)
 }
