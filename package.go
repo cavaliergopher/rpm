@@ -70,10 +70,13 @@ func (c *Package) dependencies(nevrsTagID, flagsTagID, namesTagID, versionsTagID
 	vers := c.Header.GetTag(versionsTagID).StringSlice()
 	deps := make([]Dependency, len(names))
 	for i := 0; i < len(names); i++ {
+		epoch, ver, rel := parseVersion(vers[i])
 		deps[i] = &dependency{
 			flags:   int(flgs[i]),
 			name:    names[i],
-			version: vers[i],
+			epoch:   epoch,
+			version: ver,
+			release: rel,
 		}
 	}
 	return deps
