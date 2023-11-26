@@ -12,6 +12,7 @@ const r_MaxHeaderSize = 33554432
 type Header struct {
 	Version int
 	Tags    map[int]*Tag
+	Size    int
 }
 
 // GetTag returns the tag with the given identifier.
@@ -173,15 +174,18 @@ func readHeader(r io.Reader, pad bool) (*Header, error) {
 	}
 
 	// pad to next header
-	padding := int64(8-(hdrBytes.Size()%8)) % 8
-	if pad && padding != 0 {
-		if _, err := io.CopyN(ioutil.Discard, r, padding); err != nil {
-			return nil, err
+	var padding int64
+	if pad {
+		if padding = int64(8-(hdrBytes.Size()%8)) % 8; padding != 0 {
+			if _, err := io.CopyN(ioutil.Discard, r, padding); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return &Header{
 		Version: hdrBytes.Version(),
 		Tags:    tags,
+		Size:    16 + hdrBytes.Size() + hdrBytes.IndexCount()*16 + int(padding),
 	}, nil
 }
