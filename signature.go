@@ -144,9 +144,12 @@ func MD5Check(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	payloadSize := sigheader.GetTag(1000).Int64() // RPMSIGTAG_SIZE
+	payloadSize := sigheader.GetTag(270).Int64() // RPMSIGTAG_LONGSIGSIZE
 	if payloadSize == 0 {
-		return errorf("tag not found: RPMSIGTAG_SIZE")
+		payloadSize = sigheader.GetTag(1000).Int64() // RPMSIGTAG_SIGSIZE
+		if payloadSize == 0 {
+			return fmt.Errorf("tag not found: RPMSIGTAG_SIZE")
+		}
 	}
 	expect := sigheader.GetTag(1004).Bytes() // RPMSIGTAG_MD5
 	if expect == nil {
