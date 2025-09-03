@@ -43,7 +43,7 @@ func (b rpmIndex) ValueCount() int { return int(binary.BigEndian.Uint32(b[12:16]
 func readHeader(r io.Reader, pad bool) (*Header, error) {
 	// decode the header structure header
 	var hdrBytes rpmHeader
-	if _, err := r.Read(hdrBytes[:]); err != nil {
+	if _, err := io.ReadFull(r, hdrBytes[:]); err != nil {
 		return nil, err
 	}
 	if hdrBytes.Size() > r_MaxHeaderSize {
@@ -64,7 +64,7 @@ func readHeader(r io.Reader, pad bool) (*Header, error) {
 	// decode the index
 	indexBytes := make([]rpmIndex, hdrBytes.IndexCount())
 	for i := 0; i < len(indexBytes); i++ {
-		if _, err := r.Read(indexBytes[i][:]); err != nil {
+		if _, err := io.ReadFull(r, indexBytes[i][:]); err != nil {
 			return nil, err
 		}
 		if indexBytes[i].Offset() >= hdrBytes.Size() {
