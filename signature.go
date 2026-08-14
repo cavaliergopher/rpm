@@ -30,6 +30,12 @@ var gpgTags = []int{
 	1005, // RPMSIGTAG_GPG
 }
 
+// in order of precedence, signatures covering the header region only
+var headerGpgTags = []int{
+	267, // RPMTAG_DSAHEADER
+	268, // RPMTAG_RSAHEADER
+}
+
 // see: https://github.com/rpm-software-management/rpm/blob/3b1f4b0c6c9407b08620a5756ce422df10f6bd1a/rpmio/rpmpgp.c#L51
 var gpgPubkeyTbl = map[packet.PublicKeyAlgorithm]string{
 	packet.PubKeyAlgoRSA:            "RSA",
@@ -43,7 +49,8 @@ var gpgPubkeyTbl = map[packet.PublicKeyAlgorithm]string{
 
 // Map Go hashes to rpm info name
 // See: https://golang.org/src/crypto/crypto.go?s=#L23
-//      https://github.com/rpm-software-management/rpm/blob/3b1f4b0c6c9407b08620a5756ce422df10f6bd1a/rpmio/rpmpgp.c#L88
+//
+//	https://github.com/rpm-software-management/rpm/blob/3b1f4b0c6c9407b08620a5756ce422df10f6bd1a/rpmio/rpmpgp.c#L88
 var gpgHashTbl = []string{
 	"Unknown hash algorithm",
 	"MD4",
@@ -104,6 +111,39 @@ func readSigHeader(r io.Reader) (*Header, error) {
 	return sig, nil
 }
 
+// readHeaderRegion reads the raw header region of a rpm package from r and
+// returns it. The header region covers the header data structure, the index
+// entries and all string and binary data of the header.
+func readHeaderRegion(r io.Reader) ([]byte, error) {
+	// decode the header structure header
+	var hdrBytes rpmHeader
+	if _, err := io.ReadFull(r, hdrBytes[:]); err != nil {
+		return nil, err
+	}
+	if hdrBytes.Size() > r_MaxHeaderSize {
+		return nil, errorf(
+			"header size exceeds the maximum of %d: %d",
+			r_MaxHeaderSize,
+			hdrBytes.Size(),
+		)
+	}
+	if hdrBytes.IndexCount()*len(hdrBytes) > r_MaxHeaderSize {
+		return nil, errorf(
+			"header index size exceeds the maximum of %d: %d",
+			r_MaxHeaderSize,
+			hdrBytes.IndexCount()*len(hdrBytes),
+		)
+	}
+
+	// read the raw header region bytes
+	buf := make([]byte, len(hdrBytes)+hdrBytes.Size()+hdrBytes.IndexCount()*len(hdrBytes))
+	copy(buf, hdrBytes[:])
+	if _, err := io.ReadFull(r, buf[len(hdrBytes):]); err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
 // GPGCheck validates the integrity of an rpm package file. Public keys in the
 // given keyring are used to validate the package signature.
 //
@@ -113,10 +153,27 @@ func GPGCheck(r io.Reader, keyring openpgp.KeyRing) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// search for a signature covering the header and the payload
 	var sigval []byte
 	for _, tag := range gpgTags {
 		if sigval = sig.GetTag(tag).Bytes(); sigval != nil {
 			break
+		}
+	}
+	// search for a signature covering only the header
+	if sigval == nil {
+		for _, tag := range headerGpgTags {
+			if sigval = sig.GetTag(tag).Bytes(); sigval != nil {
+				break
+			}
+		}
+		if sigval != nil {
+			// read the raw header region which the signature covers
+			headerBytes, err := readHeaderRegion(r)
+			if err != nil {
+				return "", err
+			}
+			r = bytes.NewReader(headerBytes)
 		}
 	}
 	if sigval == nil {
