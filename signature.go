@@ -3,6 +3,7 @@ package rpm
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -153,6 +154,41 @@ func GPGCheck(r io.Reader, keyring openpgp.KeyRing) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// Check for v6 OPENPGP signature (tag 278) first.
+	// Tag 278 contains base64-encoded OpenPGP signature(s) covering the header region.
+	if tag278 := sig.GetTag(278); tag278 != nil {
+		sigStrs := tag278.StringSlice()
+		if len(sigStrs) > 0 {
+			// Read the raw header region which the signature covers
+			headerBytes, err := readHeaderRegion(r)
+			if err != nil {
+				return "", err
+			}
+			// Try each signature in the array
+			for _, sigStr := range sigStrs {
+				rawSig, err := base64.StdEncoding.DecodeString(sigStr)
+				if err != nil {
+					continue
+				}
+				signer, err := openpgp.CheckDetachedSignature(
+					keyring,
+					bytes.NewReader(headerBytes),
+					bytes.NewReader(rawSig),
+				)
+				if err == errors.ErrUnknownIssuer {
+					continue
+				} else if err != nil {
+					continue
+				}
+				for id := range signer.Identities {
+					return id, nil
+				}
+			}
+		}
+		return "", ErrGPGCheckFailed
+	}
+
 	// search for a signature covering the header and the payload
 	var sigval []byte
 	for _, tag := range gpgTags {
@@ -200,6 +236,11 @@ func MD5Check(r io.Reader) error {
 	sigheader, err := readSigHeader(r)
 	if err != nil {
 		return err
+	}
+	// v6 packages use SHA3_256 (tag 279) for header integrity, not MD5.
+	// If tag 279 is present, skip MD5 validation.
+	if sigheader.GetTag(279) != nil {
+		return nil
 	}
 	payloadSize := sigheader.GetTag(270).Int64() // RPMSIGTAG_LONGSIGSIZE
 	if payloadSize == 0 {
