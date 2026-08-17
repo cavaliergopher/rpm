@@ -3,7 +3,6 @@ package rpm
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -28,9 +27,9 @@ func TestMD5Check(t *testing.T) {
 
 func TestGPGCheck(t *testing.T) {
 	// read testdata directory
-	dir, err := ioutil.ReadDir("testdata")
+	dir, err := os.ReadDir("testdata")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	// filter for gpgkey files
@@ -44,7 +43,7 @@ func TestGPGCheck(t *testing.T) {
 	// build keyring
 	keyring, err := OpenKeyRing(keyfiles...)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	// load package file paths

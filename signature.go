@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha3"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
@@ -17,7 +18,6 @@ import (
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/errors"
 	"golang.org/x/crypto/openpgp/packet"
-	"golang.org/x/crypto/sha3"
 )
 
 // isValidHex validates that a string contains only hexadecimal characters.
@@ -610,7 +610,7 @@ func IntegrityCheck(r io.ReadSeeker) error {
 		if _, err := r.Seek(pos, io.SeekStart); err != nil {
 			return err
 		}
-		checked = true
+
 		return checkPayloadCase(r, hdr.GetTag(5123) != nil, hdr.GetTag(5124) != nil, PayloadSHA3_256Check)
 	}
 
@@ -624,6 +624,7 @@ func IntegrityCheck(r io.ReadSeeker) error {
 		}
 		checked = true
 	}
+
 	if sig.GetTag(269) != nil { // RPMTAG_SHA1HEADER
 		if err := SHA1Check(r); err != nil {
 			return err
@@ -633,6 +634,7 @@ func IntegrityCheck(r io.ReadSeeker) error {
 		}
 		checked = true
 	}
+
 	if sig.GetTag(273) != nil { // RPMTAG_SHA256HEADER
 		if err := SHA256Check(r); err != nil {
 			return err
@@ -642,16 +644,22 @@ func IntegrityCheck(r io.ReadSeeker) error {
 		}
 		checked = true
 	}
-	if err := checkPayloadCase(r, hdr.GetTag(5092) != nil, hdr.GetTag(5097) != nil, PayloadSHA256Check); err != nil {
+
+	tag5092NotNil := hdr.GetTag(5092) != nil
+	tag5097NotNil := hdr.GetTag(5097) != nil
+
+	if err := checkPayloadCase(r, tag5092NotNil, tag5097NotNil, PayloadSHA256Check); err != nil {
 		return err
 	}
-	if hdr.GetTag(5092) != nil || hdr.GetTag(5097) != nil { // RPMTAG_PAYLOADSHA256 or ALT
+
+	if tag5092NotNil || tag5097NotNil { // RPMTAG_PAYLOADSHA256 or ALT
 		checked = true
 	}
 
 	if !checked {
 		return ErrNoSignatureTags
 	}
+
 	return nil
 }
 
