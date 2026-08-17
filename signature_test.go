@@ -279,3 +279,45 @@ func ExampleMD5Check() {
 
 	// Output: Package passed checksum validation
 }
+
+// TestIntegrityCheck validates the integrity of each test package and prints
+// the detected format (v4 or v6) and the result.
+func TestIntegrityCheck(t *testing.T) {
+	files := getTestFiles()
+
+	for filename, b := range files {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s: PANIC: %v", filename, r)
+				}
+			}()
+
+			r := bytes.NewReader(b)
+
+			// Detect format by reading sig header
+			sig, err := readSigHeader(r)
+			if err != nil {
+				t.Errorf("%s: failed to read signature header: %v", filename, err)
+				return
+			}
+
+			// v6 has RPMSIGTAG_RESERVED (999) and RPMSIGTAG_SHA3_256 (279)
+			isV6 := sig.GetTag(999) != nil && sig.GetTag(279) != nil
+			format := "v4"
+			if isV6 {
+				format = "v6"
+			}
+
+			// Run integrity check
+			r.Seek(0, 0)
+			err = IntegrityCheck(r)
+
+			if err != nil {
+				t.Errorf("%s [%s]: FAIL: %v", filename, format, err)
+			} else {
+				t.Logf("%s [%s]: OK", filename, format)
+			}
+		}()
+	}
+}

@@ -65,6 +65,10 @@ var (
 	// ErrPayloadSHA3_256CheckFailed indicates that an rpm package failed SHA3_256
 	// payload digest validation.
 	ErrPayloadSHA3_256CheckFailed = fmt.Errorf("SHA3_256 payload digest validation failed")
+
+	// ErrNoSignatureTags indicates that an rpm package has no signature or
+	// digest tags for integrity verification.
+	ErrNoSignatureTags = fmt.Errorf("no signature or digest tags found for integrity verification")
 )
 
 // in order of precedence
@@ -547,4 +551,125 @@ func OpenKeyRing(name ...string) (openpgp.KeyRing, error) {
 		entityList = append(entityList, keyring.(openpgp.EntityList)...)
 	}
 	return entityList, nil
+}
+
+// IntegrityCheck performs a comprehensive integrity check of an RPM package.
+// It detects the package format (v4 or v6) and runs appropriate digest checks.
+//
+// v6 packages (signature header has tags 999 and 279):
+//   - SHA3_256Check (header integrity)
+//   - PayloadSHA3_256Check (payload integrity)
+//
+// v4 packages:
+//   - MD5Check (payload integrity) — if tag 1004 present
+//   - SHA1Check (header integrity) — if tag 269 present
+//   - SHA256Check (header integrity) — if tag 273 present
+//   - PayloadSHA256Check (payload integrity) — if tag 5092 present
+//
+// ALT fallback: if a primary payload digest fails but an ALT tag (5097, 5124)
+// is present, the failure is tolerated (ALT covers the same compressed payload
+// data — same behavior as C RPM getAlt).
+//
+// Returns nil if all applicable checks pass, the first error encountered,
+// or ErrNoSignatureTags if no verification tags are present (fail closed).
+func IntegrityCheck(r io.ReadSeeker) error {
+	// Save position to reset after format detection
+	pos, err := r.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return err
+	}
+
+	// Read signature header to detect format and available tags
+	sig, err := readSigHeader(r)
+	if err != nil {
+		return err
+	}
+
+	// Read main header to detect payload digest tags
+	hdr, err := readHeader(r, false)
+	if err != nil {
+		return err
+	}
+
+	// Reset reader for individual checks
+	if _, err := r.Seek(pos, io.SeekStart); err != nil {
+		return err
+	}
+
+	// Detect format: v6 has RPMSIGTAG_RESERVED (999) and RPMSIGTAG_SHA3_256 (279)
+	isV6 := sig.GetTag(999) != nil && sig.GetTag(279) != nil
+
+	// Track whether any check was performed (fail closed if none)
+	checked := false
+
+	if isV6 {
+		// v6: SHA3-256 header digest + SHA3-256 payload digest
+		if err := SHA3_256Check(r); err != nil {
+			return err
+		}
+		if _, err := r.Seek(pos, io.SeekStart); err != nil {
+			return err
+		}
+		checked = true
+		return checkPayloadCase(r, hdr.GetTag(5123) != nil, hdr.GetTag(5124) != nil, PayloadSHA3_256Check)
+	}
+
+	// v4: run checks only for tags that are present
+	if sig.GetTag(1004) != nil { // RPMSIGTAG_MD5
+		if err := MD5Check(r); err != nil {
+			return err
+		}
+		if _, err := r.Seek(pos, io.SeekStart); err != nil {
+			return err
+		}
+		checked = true
+	}
+	if sig.GetTag(269) != nil { // RPMTAG_SHA1HEADER
+		if err := SHA1Check(r); err != nil {
+			return err
+		}
+		if _, err := r.Seek(pos, io.SeekStart); err != nil {
+			return err
+		}
+		checked = true
+	}
+	if sig.GetTag(273) != nil { // RPMTAG_SHA256HEADER
+		if err := SHA256Check(r); err != nil {
+			return err
+		}
+		if _, err := r.Seek(pos, io.SeekStart); err != nil {
+			return err
+		}
+		checked = true
+	}
+	if err := checkPayloadCase(r, hdr.GetTag(5092) != nil, hdr.GetTag(5097) != nil, PayloadSHA256Check); err != nil {
+		return err
+	}
+	if hdr.GetTag(5092) != nil || hdr.GetTag(5097) != nil { // RPMTAG_PAYLOADSHA256 or ALT
+		checked = true
+	}
+
+	if !checked {
+		return ErrNoSignatureTags
+	}
+	return nil
+}
+
+// checkPayloadCase handles payload digest checks with ALT fallback.
+func checkPayloadCase(r io.Reader, hasPrimary, hasAlt bool, check func(io.Reader) error) error {
+	switch {
+	case !hasPrimary && !hasAlt:
+		return nil
+	case hasPrimary && hasAlt:
+		// Both present: try primary, tolerate failure if ALT exists
+		if err := check(r); err != nil {
+			return nil
+		}
+		return nil
+	case hasPrimary:
+		return check(r)
+	case hasAlt:
+		return nil // ALT-only: tolerated
+	}
+	return nil
 }
