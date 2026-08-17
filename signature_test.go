@@ -3,7 +3,6 @@ package rpm
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -28,9 +27,9 @@ func TestMD5Check(t *testing.T) {
 
 func TestGPGCheck(t *testing.T) {
 	// read testdata directory
-	dir, err := ioutil.ReadDir("testdata")
+	dir, err := os.ReadDir("testdata")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	// filter for gpgkey files
@@ -44,7 +43,7 @@ func TestGPGCheck(t *testing.T) {
 	// build keyring
 	keyring, err := OpenKeyRing(keyfiles...)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	// load package file paths
@@ -62,6 +61,171 @@ func TestGPGCheck(t *testing.T) {
 	}
 
 	t.Logf("Validated GPG signature for %d packages", valid)
+}
+
+// TestSHA1Check validates the SHA1 header checksum for each test package
+// that carries the RPMTAG_SHA1HEADER (269) tag.
+func TestSHA1Check(t *testing.T) {
+	files := getTestFiles()
+
+	valid := 0
+	for filename, b := range files {
+		sig, err := readSigHeader(bytes.NewReader(b))
+		if err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		if sig.GetTag(269) == nil {
+			continue // skip packages without SHA1HEADER
+		}
+		if err := SHA1Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+		} else {
+			valid++
+		}
+	}
+
+	t.Logf("Validated SHA1 header checksum for %d packages", valid)
+}
+
+// TestSHA256Check validates the SHA256 header checksum for each test package
+// that carries the RPMTAG_SHA256HEADER (273) tag.
+func TestSHA256Check(t *testing.T) {
+	files := getTestFiles()
+
+	valid := 0
+	for filename, b := range files {
+		sig, err := readSigHeader(bytes.NewReader(b))
+		if err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		if sig.GetTag(273) == nil {
+			continue // skip packages without SHA256HEADER
+		}
+		if err := SHA256Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+		} else {
+			valid++
+		}
+	}
+
+	t.Logf("Validated SHA256 header checksum for %d packages", valid)
+}
+
+// TestSHA3_256Check validates the SHA3_256 header checksum for each test
+// package that carries the RPMTAG_SHA3_256HEADER (279) tag.
+func TestSHA3_256Check(t *testing.T) {
+	files := getTestFiles()
+
+	valid := 0
+	for filename, b := range files {
+		sig, err := readSigHeader(bytes.NewReader(b))
+		if err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		if sig.GetTag(279) == nil {
+			continue // skip packages without SHA3_256HEADER
+		}
+		if err := SHA3_256Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+		} else {
+			valid++
+		}
+	}
+
+	t.Logf("Validated SHA3_256 header checksum for %d packages", valid)
+}
+
+// TestPayloadSHA256Check validates the SHA256 payload digest for each test
+// package that carries the RPMTAG_PAYLOADSHA256 (5092) tag in its main header.
+func TestPayloadSHA256Check(t *testing.T) {
+	files := getTestFiles()
+
+	valid := 0
+	for filename, b := range files {
+		r := bytes.NewReader(b)
+		if _, err := readSigHeader(r); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		hdr, err := readHeader(r, false)
+		if err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		if hdr.GetTag(5092) == nil {
+			continue // skip packages without PAYLOADSHA256
+		}
+		if err := PayloadSHA256Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+		} else {
+			valid++
+		}
+	}
+
+	t.Logf("Validated SHA256 payload digest for %d packages", valid)
+}
+
+// TestPayloadSHA512Check validates the SHA512 payload digest for each test
+// package that carries the RPMTAG_PAYLOADSHA512 (5121) tag in its main header.
+func TestPayloadSHA512Check(t *testing.T) {
+	files := getTestFiles()
+
+	valid := 0
+	for filename, b := range files {
+		r := bytes.NewReader(b)
+		if _, err := readSigHeader(r); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		hdr, err := readHeader(r, false)
+		if err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		if hdr.GetTag(5121) == nil {
+			continue // skip packages without PAYLOADSHA512
+		}
+		if err := PayloadSHA512Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+		} else {
+			valid++
+		}
+	}
+
+	t.Logf("Validated SHA512 payload digest for %d packages", valid)
+}
+
+// TestPayloadSHA3_256Check validates the SHA3-256 payload digest for each test
+// package that carries the RPMTAG_PAYLOADSHA3_256 (5123) tag in its main header.
+func TestPayloadSHA3_256Check(t *testing.T) {
+	files := getTestFiles()
+
+	valid := 0
+	for filename, b := range files {
+		r := bytes.NewReader(b)
+		if _, err := readSigHeader(r); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		hdr, err := readHeader(r, false)
+		if err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		if hdr.GetTag(5123) == nil {
+			continue // skip packages without PAYLOADSHA3_256
+		}
+		if err := PayloadSHA3_256Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+		} else {
+			valid++
+		}
+	}
+
+	t.Logf("Validated SHA3_256 payload digest for %d packages", valid)
 }
 
 // ExampleGPGCheck reads a public GPG key and uses it to validate the signature
@@ -113,4 +277,46 @@ func ExampleMD5Check() {
 	}
 
 	// Output: Package passed checksum validation
+}
+
+// TestIntegrityCheck validates the integrity of each test package and prints
+// the detected format (v4 or v6) and the result.
+func TestIntegrityCheck(t *testing.T) {
+	files := getTestFiles()
+
+	for filename, b := range files {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s: PANIC: %v", filename, r)
+				}
+			}()
+
+			r := bytes.NewReader(b)
+
+			// Detect format by reading sig header
+			sig, err := readSigHeader(r)
+			if err != nil {
+				t.Errorf("%s: failed to read signature header: %v", filename, err)
+				return
+			}
+
+			// v6 has RPMSIGTAG_RESERVED (999) and RPMSIGTAG_SHA3_256 (279)
+			isV6 := sig.GetTag(999) != nil && sig.GetTag(279) != nil
+			format := "v4"
+			if isV6 {
+				format = "v6"
+			}
+
+			// Run integrity check
+			r.Seek(0, 0)
+			err = IntegrityCheck(r)
+
+			if err != nil {
+				t.Errorf("%s [%s]: FAIL: %v", filename, format, err)
+			} else {
+				t.Logf("%s [%s]: OK", filename, format)
+			}
+		}()
+	}
 }
