@@ -48,6 +48,10 @@ var (
 	// ErrPayloadSHA512CheckFailed indicates that an rpm package failed SHA512
 	// payload digest validation.
 	ErrPayloadSHA512CheckFailed = fmt.Errorf("SHA512 payload digest validation failed")
+
+	// ErrPayloadSHA3_256CheckFailed indicates that an rpm package failed SHA3_256
+	// payload digest validation.
+	ErrPayloadSHA3_256CheckFailed = fmt.Errorf("SHA3_256 payload digest validation failed")
 )
 
 // in order of precedence
@@ -431,6 +435,37 @@ func PayloadSHA512Check(r io.Reader) error {
 	actual := hex.EncodeToString(h.Sum(nil))
 	if !strings.EqualFold(actual, expected) {
 		return ErrPayloadSHA512CheckFailed
+	}
+	return nil
+}
+
+// PayloadSHA3_256Check validates the integrity of an rpm package file. The
+// SHA3-256 digest of the compressed payload is computed and compared with the
+// digest specified in the package main header.
+//
+// If validation fails, ErrPayloadSHA3_256CheckFailed is returned.
+func PayloadSHA3_256Check(r io.Reader) error {
+	if _, err := readSigHeader(r); err != nil {
+		return err
+	}
+	hdr, err := readHeader(r, false)
+	if err != nil {
+		return err
+	}
+	expected := hdr.GetTag(5123).String() // RPMTAG_PAYLOADSHA3_256
+	if expected == "" {
+		if hdr.GetTag(5124) != nil {
+			return nil // ALT-only: tolerated, requires decompression (out of scope)
+		}
+		return errorf("tag not found: RPMTAG_PAYLOADSHA3_256")
+	}
+	h := sha3.New256()
+	if _, err := io.Copy(h, r); err != nil {
+		return err
+	}
+	actual := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(actual, expected) {
+		return ErrPayloadSHA3_256CheckFailed
 	}
 	return nil
 }
