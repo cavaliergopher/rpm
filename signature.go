@@ -3,10 +3,13 @@ package rpm
 import (
 	"bytes"
 	"crypto/md5"
+	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
@@ -22,6 +25,10 @@ var (
 	// ErrGPGCheckFailed indicates that an rpm package failed GPG signature
 	// validation.
 	ErrGPGCheckFailed = fmt.Errorf("GPG signature validation failed")
+
+	// ErrSHA1CheckFailed indicates that an rpm package failed SHA1 header
+	// checksum validation.
+	ErrSHA1CheckFailed = fmt.Errorf("SHA1 header checksum validation failed")
 )
 
 // in order of precedence
@@ -262,6 +269,33 @@ func MD5Check(r io.Reader) error {
 	actual := h.Sum(nil)
 	if !bytes.Equal(expect, actual) {
 		return ErrMD5CheckFailed
+	}
+	return nil
+}
+
+// SHA1Check validates the integrity of an rpm package file. The SHA1 checksum
+// is computed for the package header and compared with the checksum specified
+// in the package signature.
+//
+// If validation fails, ErrSHA1CheckFailed is returned.
+func SHA1Check(r io.Reader) error {
+	sig, err := readSigHeader(r)
+	if err != nil {
+		return err
+	}
+	expected := sig.GetTag(269).String() // RPMTAG_SHA1HEADER
+	if expected == "" {
+		return errorf("tag not found: RPMTAG_SHA1HEADER")
+	}
+	headerBytes, err := readHeaderRegion(r)
+	if err != nil {
+		return err
+	}
+	h := sha1.New()
+	h.Write(headerBytes)
+	actual := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(actual, expected) {
+		return ErrSHA1CheckFailed
 	}
 	return nil
 }
