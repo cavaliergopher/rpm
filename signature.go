@@ -16,6 +16,7 @@ import (
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/errors"
 	"golang.org/x/crypto/openpgp/packet"
+	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -34,6 +35,14 @@ var (
 	// ErrSHA256CheckFailed indicates that an rpm package failed SHA256 header
 	// checksum validation.
 	ErrSHA256CheckFailed = fmt.Errorf("SHA256 header checksum validation failed")
+
+	// ErrSHA3_256CheckFailed indicates that an rpm package failed SHA3-256
+	// header checksum validation.
+	ErrSHA3_256CheckFailed = fmt.Errorf("SHA3_256 header checksum validation failed")
+
+	// ErrPayloadSHA256CheckFailed indicates that an rpm package failed SHA256
+	// payload digest validation.
+	ErrPayloadSHA256CheckFailed = fmt.Errorf("SHA256 payload digest validation failed")
 )
 
 // in order of precedence
@@ -328,6 +337,64 @@ func SHA256Check(r io.Reader) error {
 	actual := hex.EncodeToString(h.Sum(nil))
 	if !strings.EqualFold(actual, expected) {
 		return ErrSHA256CheckFailed
+	}
+	return nil
+}
+
+// SHA3_256Check validates the integrity of an rpm package file. The SHA3-256
+// checksum is computed for the package header and compared with the checksum
+// specified in the package signature.
+//
+// If validation fails, ErrSHA3_256CheckFailed is returned.
+func SHA3_256Check(r io.Reader) error {
+	sig, err := readSigHeader(r)
+	if err != nil {
+		return err
+	}
+	expected := sig.GetTag(279).String() // RPMTAG_SHA3_256HEADER
+	if expected == "" {
+		return errorf("tag not found: RPMTAG_SHA3_256HEADER")
+	}
+	headerBytes, err := readHeaderRegion(r)
+	if err != nil {
+		return err
+	}
+	h := sha3.New256()
+	h.Write(headerBytes)
+	actual := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(actual, expected) {
+		return ErrSHA3_256CheckFailed
+	}
+	return nil
+}
+
+// PayloadSHA256Check validates the integrity of an rpm package file. The
+// SHA256 digest of the compressed payload is computed and compared with the
+// digest specified in the package main header.
+//
+// If validation fails, ErrPayloadSHA256CheckFailed is returned.
+func PayloadSHA256Check(r io.Reader) error {
+	if _, err := readSigHeader(r); err != nil {
+		return err
+	}
+	hdr, err := readHeader(r, false)
+	if err != nil {
+		return err
+	}
+	expected := hdr.GetTag(5092).String() // RPMTAG_PAYLOADSHA256
+	if expected == "" {
+		if hdr.GetTag(5097) != nil {
+			return nil // ALT-only: tolerated, requires decompression (out of scope)
+		}
+		return errorf("tag not found: RPMTAG_PAYLOADSHA256")
+	}
+	h := sha256.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return err
+	}
+	actual := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(actual, expected) {
+		return ErrPayloadSHA256CheckFailed
 	}
 	return nil
 }
