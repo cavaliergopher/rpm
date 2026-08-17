@@ -20,6 +20,19 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+// isValidHex validates that a string contains only hexadecimal characters.
+func isValidHex(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
 var (
 	// ErrMD5CheckFailed indicates that an rpm package failed MD5 checksum
 	// validation.
@@ -283,6 +296,10 @@ func MD5Check(r io.Reader) error {
 	if expect == nil {
 		return errorf("tag not found: RPMSIGTAG_MD5")
 	}
+	// Validate MD5 digest length (must be exactly 16 bytes, C RPM enforces this)
+	if len(expect) != md5.Size {
+		return errorf("invalid MD5 digest length: got %d, want %d", len(expect), md5.Size)
+	}
 	h := md5.New()
 	if n, err := io.Copy(h, r); err != nil {
 		return err
@@ -309,6 +326,10 @@ func SHA1Check(r io.Reader) error {
 	expected := sig.GetTag(269).String() // RPMTAG_SHA1HEADER
 	if expected == "" {
 		return errorf("tag not found: RPMTAG_SHA1HEADER")
+	}
+	// Validate hex format (C RPM validates hex before comparison)
+	if !isValidHex(expected) {
+		return errorf("invalid hex string in RPMTAG_SHA1HEADER")
 	}
 	headerBytes, err := readHeaderRegion(r)
 	if err != nil {
@@ -337,6 +358,10 @@ func SHA256Check(r io.Reader) error {
 	if expected == "" {
 		return errorf("tag not found: RPMTAG_SHA256HEADER")
 	}
+	// Validate hex format (C RPM validates hex before comparison)
+	if !isValidHex(expected) {
+		return errorf("invalid hex string in RPMTAG_SHA256HEADER")
+	}
 	headerBytes, err := readHeaderRegion(r)
 	if err != nil {
 		return err
@@ -363,6 +388,10 @@ func SHA3_256Check(r io.Reader) error {
 	expected := sig.GetTag(279).String() // RPMTAG_SHA3_256HEADER
 	if expected == "" {
 		return errorf("tag not found: RPMTAG_SHA3_256HEADER")
+	}
+	// Validate hex format (C RPM validates hex before comparison)
+	if !isValidHex(expected) {
+		return errorf("invalid hex string in RPMTAG_SHA3_256HEADER")
 	}
 	headerBytes, err := readHeaderRegion(r)
 	if err != nil {
@@ -397,6 +426,10 @@ func PayloadSHA256Check(r io.Reader) error {
 		}
 		return errorf("tag not found: RPMTAG_PAYLOADSHA256")
 	}
+	// Validate hex format (C RPM validates hex before comparison)
+	if !isValidHex(expected) {
+		return errorf("invalid hex string in RPMTAG_PAYLOADSHA256")
+	}
 	h := sha256.New()
 	if _, err := io.Copy(h, r); err != nil {
 		return err
@@ -428,6 +461,10 @@ func PayloadSHA512Check(r io.Reader) error {
 		}
 		return errorf("tag not found: RPMTAG_PAYLOADSHA512")
 	}
+	// Validate hex format (C RPM validates hex before comparison)
+	if !isValidHex(expected) {
+		return errorf("invalid hex string in RPMTAG_PAYLOADSHA512")
+	}
 	h := sha512.New()
 	if _, err := io.Copy(h, r); err != nil {
 		return err
@@ -458,6 +495,10 @@ func PayloadSHA3_256Check(r io.Reader) error {
 			return nil // ALT-only: tolerated, requires decompression (out of scope)
 		}
 		return errorf("tag not found: RPMTAG_PAYLOADSHA3_256")
+	}
+	// Validate hex format (C RPM validates hex before comparison)
+	if !isValidHex(expected) {
+		return errorf("invalid hex string in RPMTAG_PAYLOADSHA3_256")
 	}
 	h := sha3.New256()
 	if _, err := io.Copy(h, r); err != nil {
