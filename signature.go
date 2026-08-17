@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -29,6 +30,10 @@ var (
 	// ErrSHA1CheckFailed indicates that an rpm package failed SHA1 header
 	// checksum validation.
 	ErrSHA1CheckFailed = fmt.Errorf("SHA1 header checksum validation failed")
+
+	// ErrSHA256CheckFailed indicates that an rpm package failed SHA256 header
+	// checksum validation.
+	ErrSHA256CheckFailed = fmt.Errorf("SHA256 header checksum validation failed")
 )
 
 // in order of precedence
@@ -296,6 +301,33 @@ func SHA1Check(r io.Reader) error {
 	actual := hex.EncodeToString(h.Sum(nil))
 	if !strings.EqualFold(actual, expected) {
 		return ErrSHA1CheckFailed
+	}
+	return nil
+}
+
+// SHA256Check validates the integrity of an rpm package file. The SHA256
+// checksum is computed for the package header and compared with the checksum
+// specified in the package signature.
+//
+// If validation fails, ErrSHA256CheckFailed is returned.
+func SHA256Check(r io.Reader) error {
+	sig, err := readSigHeader(r)
+	if err != nil {
+		return err
+	}
+	expected := sig.GetTag(273).String() // RPMTAG_SHA256HEADER
+	if expected == "" {
+		return errorf("tag not found: RPMTAG_SHA256HEADER")
+	}
+	headerBytes, err := readHeaderRegion(r)
+	if err != nil {
+		return err
+	}
+	h := sha256.New()
+	h.Write(headerBytes)
+	actual := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(actual, expected) {
+		return ErrSHA256CheckFailed
 	}
 	return nil
 }

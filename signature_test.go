@@ -89,6 +89,31 @@ func TestSHA1Check(t *testing.T) {
 	t.Logf("Validated SHA1 header checksum for %d packages", valid)
 }
 
+// TestSHA256Check validates the SHA256 header checksum for each test package
+// that carries the RPMTAG_SHA256HEADER (273) tag.
+func TestSHA256Check(t *testing.T) {
+	files := getTestFiles()
+
+	valid := 0
+	for filename, b := range files {
+		sig, err := readSigHeader(bytes.NewReader(b))
+		if err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+			continue
+		}
+		if sig.GetTag(273) == nil {
+			continue // skip packages without SHA256HEADER
+		}
+		if err := SHA256Check(bytes.NewReader(b)); err != nil {
+			t.Errorf("Validation error for %s: %v", filename, err)
+		} else {
+			valid++
+		}
+	}
+
+	t.Logf("Validated SHA256 header checksum for %d packages", valid)
+}
+
 // ExampleGPGCheck reads a public GPG key and uses it to validate the signature
 // of a local rpm package.
 func ExampleGPGCheck() {
