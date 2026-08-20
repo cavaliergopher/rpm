@@ -157,7 +157,16 @@ func (c *Package) Files() []FileInfo {
 	names := c.Header.GetTag(1117).StringSlice()
 	dirs := c.Header.GetTag(1118).StringSlice()
 	modes := c.Header.GetTag(1030).Int64Slice()
-	sizes := c.Header.GetTag(1028).Int64Slice()
+	// File sizes are recorded in either RPMTAG_FILESIZES (1028, 32 bit) or
+	// RPMTAG_LONGFILESIZES (5008, 64 bit), and rpm writes only the variant the
+	// values fit in, so both have to be considered. rpm 4 switches to the 64 bit
+	// tag once a file exceeds 4GB; packages in the rpm 6 format use it for every
+	// package, because all file sizes there are 64 bit. This mirrors what Size()
+	// and ArchiveSize() already do for the package-level sizes.
+	sizes := c.Header.GetTag(5008).Int64Slice()
+	if len(sizes) == 0 {
+		sizes = c.Header.GetTag(1028).Int64Slice()
+	}
 	times := c.Header.GetTag(1034).Int64Slice()
 	flags := c.Header.GetTag(1037).Int64Slice()
 	owners := c.Header.GetTag(1039).StringSlice()

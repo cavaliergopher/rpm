@@ -219,3 +219,39 @@ func ExamplePackage_Files() {
 	// -rwxr-xr-x root root  4096 Nov 25 16:26 /usr/share/doc/epel-release-7
 	// -rw-r--r-- root root 18385 Nov 25 16:23 /usr/share/doc/epel-release-7/GPL
 }
+
+// A header that records file sizes only in RPMTAG_LONGFILESIZES (5008) must be
+// read correctly. rpm writes just one of the 32/64 bit variants, whichever the
+// values fit in: rpm 4 moves to the 64 bit tag once a file exceeds 4GB, and
+// packages in the rpm 6 format always use it.
+func TestPackageFilesLongFileSizes(t *testing.T) {
+	const fourGiB = int64(4 * 1024 * 1024 * 1024)
+	p := &Package{Header: Header{Tags: map[int]*Tag{
+		1116: {ID: 1116, Type: TagTypeInt32, Value: []int64{0, 0}},
+		1117: {ID: 1117, Type: TagTypeStringArray, Value: []string{"small.txt", "big.bin"}},
+		1118: {ID: 1118, Type: TagTypeStringArray, Value: []string{"/opt/example/"}},
+		1030: {ID: 1030, Type: TagTypeInt16, Value: []int64{0100644, 0100644}},
+		// No RPMTAG_FILESIZES (1028) at all, only the 64 bit variant.
+		5008: {ID: 5008, Type: TagTypeInt64, Value: []int64{6, fourGiB + 1}},
+		1034: {ID: 1034, Type: TagTypeInt32, Value: []int64{1416932629, 1416932629}},
+		1037: {ID: 1037, Type: TagTypeInt32, Value: []int64{0, 0}},
+		1039: {ID: 1039, Type: TagTypeStringArray, Value: []string{"root", "root"}},
+		1040: {ID: 1040, Type: TagTypeStringArray, Value: []string{"root", "root"}},
+		1035: {ID: 1035, Type: TagTypeStringArray, Value: []string{"", ""}},
+		1036: {ID: 1036, Type: TagTypeStringArray, Value: []string{"", ""}},
+	}}}
+
+	files := p.Files()
+	if len(files) != 2 {
+		t.Fatalf("expected 2 files but got %v", len(files))
+	}
+	if want, got := "/opt/example/small.txt", files[0].Name(); got != want {
+		t.Errorf("expected name %v but got %v", want, got)
+	}
+	if want, got := int64(6), files[0].Size(); got != want {
+		t.Errorf("expected size %v but got %v", want, got)
+	}
+	if want, got := fourGiB+1, files[1].Size(); got != want {
+		t.Errorf("expected size %v but got %v", want, got)
+	}
+}
